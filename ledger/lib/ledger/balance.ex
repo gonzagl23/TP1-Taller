@@ -13,7 +13,7 @@ defmodule Ledger.Balance do
 
     if is_nil(cuenta) do
       IO.puts("Error: Debe especificarse el flag -c1 con el número de cuenta")
-      System.halt(1)
+      exit(:cuenta_invalida)
     end
 
     transacciones = CSVParser.leer_transacciones("transacciones.csv")
@@ -32,7 +32,7 @@ defmodule Ledger.Balance do
         case Map.fetch(precios, moneda_destino) do
           :error ->
             IO.puts("Moneda destino inválida: #{moneda_destino}")
-            System.halt(1)
+            exit(:moneda_invalida)
 
           {:ok, precio_destino} ->
             total_usd =
