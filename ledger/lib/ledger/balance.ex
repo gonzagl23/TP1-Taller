@@ -16,15 +16,21 @@ defmodule Ledger.Balance do
       exit(:cuenta_invalida)
     end
 
-    transacciones = CSVParser.leer_transacciones("transacciones.csv")
+    archivo_transacciones = Map.get(opciones, :archivo_transacciones, "transacciones.csv")
+    transacciones = CSVParser.leer_transacciones(archivo_transacciones)
     precios = CSVParser.leer_monedas("monedas.csv")
+
+    cuentas_altas =
+      transacciones
+      |> Enum.filter(fn {:ok, t} -> t.tipo == "alta_cuenta" end)
+      |> Enum.map(fn {:ok, t} -> t.cuenta_origen end)
+      |> MapSet.new()
 
     balances =
       Enum.reduce(transacciones, %{}, fn
         {:error, _linea}, acc -> acc
         {:ok, t}, acc ->
-          acc
-          |> actualizar_balance(t, cuenta, precios)
+          actualizar_balance(acc, t, cuenta, precios, cuentas_altas)
       end)
 
     balances_finales =
@@ -54,15 +60,20 @@ defmodule Ledger.Balance do
     end
   end
 
-  defp actualizar_balance(balances, transaccion, cuenta, precios) do
+  defp actualizar_balance(balances, transaccion, cuenta, precios, cuentas_altas) do
     case transaccion.tipo do
       "transferencia" ->
-        balances
-        |> actualizar_saldo(transaccion.cuenta_origen, transaccion.moneda_origen, -transaccion.monto, cuenta)
-        |> actualizar_saldo(transaccion.cuenta_destino, transaccion.moneda_destino, transaccion.monto, cuenta)
+        if MapSet.member?(cuentas_altas, transaccion.cuenta_origen) and
+           MapSet.member?(cuentas_altas, transaccion.cuenta_destino) do
+          balances
+          |> actualizar_saldo(transaccion.cuenta_origen, transaccion.moneda_origen, -transaccion.monto, cuenta)
+          |> actualizar_saldo(transaccion.cuenta_destino, transaccion.moneda_destino, transaccion.monto, cuenta)
+        else
+          balances
+        end
 
       "swap" ->
-        if transaccion.cuenta_origen == cuenta do
+        if transaccion.cuenta_origen == cuenta and MapSet.member?(cuentas_altas, transaccion.cuenta_origen) do
           precio_origen = Map.get(precios, transaccion.moneda_origen, 0.0)
           precio_destino = Map.get(precios, transaccion.moneda_destino, 0.0)
 
@@ -76,9 +87,12 @@ defmodule Ledger.Balance do
           balances
         end
 
-
       "alta_cuenta" ->
-        actualizar_saldo(balances, transaccion.cuenta_origen, transaccion.moneda_origen, transaccion.monto, cuenta)
+        if MapSet.member?(cuentas_altas, transaccion.cuenta_origen) do
+          actualizar_saldo(balances, transaccion.cuenta_origen, transaccion.moneda_origen, transaccion.monto, cuenta)
+        else
+          balances
+        end
 
       _ -> balances
     end
@@ -106,12 +120,14 @@ defmodule Ledger.Balance do
     end)
   end
 
+
   defp parsear_flags(args) do
     Enum.reduce(args, %{}, fn arg, acc ->
       case String.split(arg, "=") do
         ["-c1", valor] -> Map.put(acc, :cuenta_origen, valor)
         ["-m", valor]  -> Map.put(acc, :moneda_destino, valor)
         ["-o", valor]  -> Map.put(acc, :archivo_salida, valor)
+        ["-t", valor]  -> Map.put(acc, :archivo_transacciones, valor)
         _ -> acc
       end
     end)

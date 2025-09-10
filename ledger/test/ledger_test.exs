@@ -15,7 +15,7 @@ defmodule LedgerTest do
 
   test "llama a Transacciones.listar con los flags correctos" do
     output = ExUnit.CaptureIO.capture_io(fn ->
-      CLI.main(["transacciones", "-t=casos_prueba/caso5.csv", "-c1=userA"])
+      CLI.main(["transacciones", "-t=casos_prueba/caso1.csv", "-c1=userA"])
     end)
 
     assert output =~ "userA"
@@ -30,7 +30,7 @@ defmodule LedgerTest do
   end
 
 
-  test "leer transacciones correctamente" do
+  test "parser lee transacciones correctamente" do
     transacciones = CSVParser.leer_transacciones("casos_prueba/caso1.csv")
 
     [{:ok, transaccion} | _] = transacciones
@@ -40,7 +40,7 @@ defmodule LedgerTest do
   end
 
   test "detecta transacciones inválidas" do
-    transacciones = CSVParser.leer_transacciones("casos_prueba/caso1.csv")
+    transacciones = CSVParser.leer_transacciones("casos_prueba/caso6.csv")
 
     errores = Enum.filter(transacciones, fn
       {:error, _nro_linea} -> true
@@ -50,7 +50,7 @@ defmodule LedgerTest do
     assert length(errores) > 0
   end
 
-  test "leer monedas correctamente" do
+  test "parser lee monedas correctamente" do
     monedas = CSVParser.leer_monedas("monedas.csv")
 
     assert map_size(monedas) > 0
@@ -68,8 +68,9 @@ defmodule LedgerTest do
         Transacciones.listar(["-t=casos_prueba/caso2.csv"])
       end)
 
-    assert output =~ "1;1754937004;USDT;USDT;100.5;userA;userB;transferencia"
-    assert output =~ "2;1754936774;BTC;BTC;0.1;userA;userB;transferencia"
+    assert output =~ "1;1006751404;USDT;;20000.000000;userA;;alta_cuenta"
+    assert output =~ "2;1224751404;USDT;;100.000000;userB;;alta_cuenta"
+    assert output =~ "3;1754937004;USDT;USDT;100.500000;userA;userB;transferencia"
   end
 
   test "La función listar(transacciones) detecta lineas mal formateadas" do
@@ -78,7 +79,7 @@ defmodule LedgerTest do
         Transacciones.listar(["-t=casos_prueba/caso3.csv"])
       end)
 
-    assert output =~ "Error de formato en línea 4"
+    assert output =~ "Error de formato en línea 5"
   end
 
   test "La función listar(transacciones) filtra por cuenta_origen y cuenta_destino correctamente" do
@@ -100,7 +101,7 @@ defmodule LedgerTest do
     Transacciones.listar(["-t=casos_prueba/caso5.csv", "-c1=userA","-c2=userB","-o=casos_prueba/salida.csv"])
 
     salida = File.read!("casos_prueba/salida.csv")
-    assert salida =~ "3;1754937004;USDT;USDT;100.5;userA;userB;transferencia"
+    assert salida =~ "3;1754937004;USDT;USDT;100.500000;userA;userB;transferencia"
     File.rm("casos_prueba/salida.csv")
   end
 
@@ -125,18 +126,17 @@ defmodule LedgerTest do
   end
 
   test "guarda balance en archivo de salida" do
-    archivo_salida = "casos_prueba/salida_balance.csv"
 
-    Balance.calcular(["-c1=userA", "-o=#{archivo_salida}"])
-    contenido = File.read!(archivo_salida)
+    Balance.calcular(["-c1=userA", "-o=casos_prueba/salida_balance.csv"])
+    salida = File.read!("casos_prueba/salida_balance.csv")
 
-    assert contenido =~ "ARS=833333.333333"
-    assert contenido =~ "BTC=0.100000"
-    assert contenido =~ "ETH=0.333333"
-    assert contenido =~ "EUR=847.457627"
-    assert contenido =~ "USDT=5799.300000"
+    assert salida =~ "ARS=833333.333333"
+    assert salida =~ "BTC=0.100000"
+    assert salida =~ "ETH=0.333333"
+    assert salida =~ "EUR=847.457627"
+    assert salida =~ "USDT=5799.300000"
 
-    File.rm(archivo_salida)
+    File.rm("casos_prueba/salida_balance.csv")
   end
 
   test "calcular muestra error si moneda destino es inválida" do
@@ -148,8 +148,5 @@ defmodule LedgerTest do
       )
     assert salida == :moneda_invalida
   end
-
-
-
 
 end
