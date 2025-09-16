@@ -22,7 +22,7 @@ defmodule Ledger.Transacciones do
       {:ok, transacciones_validas, _cuentas_activas} ->
         if transacciones_validas == [] do
           IO.puts("Error: No se encontraron transacciones que coincidan con los filtros")
-          System.halt(1)
+          exit(:error)
         end
 
         if archivo_salida do

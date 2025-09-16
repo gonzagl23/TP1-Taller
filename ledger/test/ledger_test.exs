@@ -87,6 +87,19 @@ defmodule LedgerTest do
     assert output == :error
   end
 
+  test "Error cuando no se encuentra transacciones que coincidan con los filtros" do
+    output =
+      catch_exit(
+        ExUnit.CaptureIO.capture_io(fn ->
+          Transacciones.listar([
+          "-t=transacciones.csv",
+          "-c1=userA",
+          "-c2=userT" ])
+        end))
+
+    assert output == :error
+  end
+
   test "La función listar(transacciones) filtra por cuenta_origen y cuenta_destino correctamente" do
     output =
       ExUnit.CaptureIO.capture_io(fn ->
