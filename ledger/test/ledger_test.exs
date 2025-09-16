@@ -6,29 +6,31 @@ defmodule LedgerTest do
   alias Ledger.CLI
 
   test "muestra mensaje de uso cuando los argumentos son incorrectos" do
-    output = ExUnit.CaptureIO.capture_io(fn ->
-      CLI.main(["argumento_incorrecto"])
-    end)
+    output =
+      ExUnit.CaptureIO.capture_io(fn ->
+        CLI.main(["argumento_incorrecto"])
+      end)
 
     assert output =~ "Uso: ./ledger [transacciones|balance] [flags]"
-    end
+  end
 
   test "llama a Transacciones.listar con los flags correctos" do
-    output = ExUnit.CaptureIO.capture_io(fn ->
-      CLI.main(["transacciones", "-t=casos_prueba/caso1.csv", "-c1=userA"])
-    end)
+    output =
+      ExUnit.CaptureIO.capture_io(fn ->
+        CLI.main(["transacciones", "-t=casos_prueba/caso1.csv", "-c1=userA"])
+      end)
 
     assert output =~ "userA"
   end
 
   test "llama a Balance.calcular con los flags correctos" do
-    output = ExUnit.CaptureIO.capture_io(fn ->
-      CLI.main(["balance", "-c1=userA"])
-    end)
+    output =
+      ExUnit.CaptureIO.capture_io(fn ->
+        CLI.main(["balance", "-c1=userA"])
+      end)
 
     assert output =~ "USDT="
   end
-
 
   test "parser lee transacciones correctamente" do
     transacciones = CSVParser.leer_transacciones("casos_prueba/caso1.csv")
@@ -42,10 +44,11 @@ defmodule LedgerTest do
   test "detecta transacciones inválidas" do
     transacciones = CSVParser.leer_transacciones("casos_prueba/caso6.csv")
 
-    errores = Enum.filter(transacciones, fn
-      {:error, _nro_linea} -> true
-      _ -> false
-    end)
+    errores =
+      Enum.filter(transacciones, fn
+        {:error, _nro_linea} -> true
+        _ -> false
+      end)
 
     assert length(errores) > 0
   end
@@ -59,7 +62,7 @@ defmodule LedgerTest do
   test "lee monedas lanza error si hay precio inválido" do
     assert_raise RuntimeError, ~r/Precio inválido en moneda ETH: asdc/, fn ->
       Ledger.CSVParser.leer_monedas("casos_prueba/casos_moneda.csv")
-      end
+    end
   end
 
   test "la función listar(transacciones) imprime por pantalla lo esperado" do
@@ -75,22 +78,24 @@ defmodule LedgerTest do
 
   test "La función listar(transacciones) detecta lineas mal formateadas" do
     output =
-      ExUnit.CaptureIO.capture_io(fn ->
-        Transacciones.listar(["-t=casos_prueba/caso3.csv"])
-      end)
+      catch_exit(
+        ExUnit.CaptureIO.capture_io(fn ->
+          Transacciones.listar(["-t=casos_prueba/caso3.csv"])
+        end)
+      )
 
-    assert output =~ "Error de formato en línea 5"
+    assert output == :error
   end
 
   test "La función listar(transacciones) filtra por cuenta_origen y cuenta_destino correctamente" do
     output =
-    ExUnit.CaptureIO.capture_io(fn ->
-      Transacciones.listar([
-        "-t=casos_prueba/caso4.csv",
-        "-c1=userA",
-        "-c2=userB"
-      ])
-    end)
+      ExUnit.CaptureIO.capture_io(fn ->
+        Transacciones.listar([
+          "-t=casos_prueba/caso4.csv",
+          "-c1=userA",
+          "-c2=userB"
+        ])
+      end)
 
     assert output =~ "userA"
     assert output =~ "userB"
@@ -98,7 +103,12 @@ defmodule LedgerTest do
   end
 
   test "La función listar(transacciones) guarda las transacciones en archivo de salida" do
-    Transacciones.listar(["-t=casos_prueba/caso5.csv", "-c1=userA","-c2=userB","-o=casos_prueba/salida.csv"])
+    Transacciones.listar([
+      "-t=casos_prueba/caso5.csv",
+      "-c1=userA",
+      "-c2=userB",
+      "-o=casos_prueba/salida.csv"
+    ])
 
     salida = File.read!("casos_prueba/salida.csv")
     assert salida =~ "3;1754937004;USDT;USDT;100.500000;userA;userB;transferencia"
@@ -106,9 +116,10 @@ defmodule LedgerTest do
   end
 
   test "calcula balance de userA y muestra por pantalla" do
-    output = ExUnit.CaptureIO.capture_io(fn ->
-      Balance.calcular(["-c1=userA"])
-    end)
+    output =
+      ExUnit.CaptureIO.capture_io(fn ->
+        Balance.calcular(["-c1=userA"])
+      end)
 
     assert output =~ "ARS=833333.333333"
     assert output =~ "BTC=0.100000"
@@ -118,15 +129,15 @@ defmodule LedgerTest do
   end
 
   test "calcular balance de userA y convierte balance a USDT correctamente" do
-    output = ExUnit.CaptureIO.capture_io(fn ->
-      Balance.calcular(["-c1=userA", "-m=USDT"])
-    end)
+    output =
+      ExUnit.CaptureIO.capture_io(fn ->
+        Balance.calcular(["-c1=userA", "-m=USDT"])
+      end)
 
     assert output =~ "USDT=14299.300000"
   end
 
   test "guarda balance en archivo de salida" do
-
     Balance.calcular(["-c1=userA", "-o=casos_prueba/salida_balance.csv"])
     salida = File.read!("casos_prueba/salida_balance.csv")
 
@@ -139,14 +150,14 @@ defmodule LedgerTest do
     File.rm("casos_prueba/salida_balance.csv")
   end
 
-  test "calcular muestra error si moneda destino es inválida" do
+  test "calcular muestra error si moneda es inválida" do
     salida =
       catch_exit(
         ExUnit.CaptureIO.capture_io(fn ->
           Ledger.Balance.calcular(["-c1=userA", "-m=da"])
         end)
       )
+
     assert salida == :moneda_invalida
   end
-
 end

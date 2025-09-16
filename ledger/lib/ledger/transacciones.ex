@@ -1,5 +1,6 @@
 defmodule Ledger.Transacciones do
   alias Ledger.CSVParser
+
   @moduledoc """
   Funcionalidad para listar transacciones.
   """
@@ -13,43 +14,55 @@ defmodule Ledger.Transacciones do
 
     transacciones = CSVParser.leer_transacciones(archivo_transacciones)
 
+    case validar_y_filtrar(transacciones, cuenta_origen, cuenta_destino) do
+      {:error, errores} ->
+        Enum.each(errores, &IO.puts/1)
+        exit(:error)
+
+      {:ok, transacciones_validas, _cuentas_activas} ->
+        if transacciones_validas == [] do
+          IO.puts("Error: No se encontraron transacciones que coincidan con los filtros")
+          System.halt(1)
+        end
+
+        if archivo_salida do
+          guardar_transacciones_csv(transacciones_validas, archivo_salida)
+        else
+          mostrar_transacciones_por_pantalla(transacciones_validas)
+        end
+    end
+  end
+
+  def validar_y_filtrar(transacciones, cuenta_origen \\ nil, cuenta_destino \\ nil) do
     cuentas_activas =
       Enum.reduce(transacciones, MapSet.new(), fn
         {:ok, t}, acc when t.tipo == "alta_cuenta" -> MapSet.put(acc, t.cuenta_origen)
         _, acc -> acc
       end)
 
-    transacciones_validas =
-      Enum.reduce(transacciones, [], fn
-        {:error, numero_linea}, transacciones_acumuladas ->
-          IO.puts("Error de formato en línea #{numero_linea}")
-          transacciones_acumuladas
+    {errores, validas} =
+      Enum.reduce(transacciones, {[], []}, fn
+        {:error, numero_linea}, {errs, oks} ->
+          {["Error de formato en línea #{numero_linea}" | errs], oks}
 
-        {:ok, transaccion}, transacciones_acumuladas ->
+        {:ok, transaccion}, {errs, oks} ->
           case validar_transaccion(transaccion, cuentas_activas) do
             :ok ->
               if aplicar_filtro_transaccion?(transaccion, cuenta_origen, cuenta_destino) do
-                [transaccion | transacciones_acumuladas]
+                {errs, [transaccion | oks]}
               else
-                transacciones_acumuladas
+                {errs, oks}
               end
 
             {:error, id_transaccion, mensaje_error} ->
-              IO.puts("Error en transaccion #{id_transaccion}: #{mensaje_error}")
-              transacciones_acumuladas
+              {["Error en transaccion #{id_transaccion}: #{mensaje_error}" | errs], oks}
           end
       end)
-      |> Enum.reverse()
 
-    if transacciones_validas == [] do
-      IO.puts("Error: No se encontraron transacciones que coincidan con los filtros")
-      System.halt(1)
-    end
-
-    if archivo_salida do
-      guardar_transacciones_csv(transacciones_validas, archivo_salida)
+    if errores == [] do
+      {:ok, Enum.reverse(validas), cuentas_activas}
     else
-      mostrar_transacciones_por_pantalla(transacciones_validas)
+      {:error, Enum.reverse(errores)}
     end
   end
 
@@ -57,28 +70,39 @@ defmodule Ledger.Transacciones do
     monedas = CSVParser.leer_monedas("monedas.csv")
     tipos_validos = ["transferencia", "swap", "alta_cuenta"]
 
-    with true <- transaccion.tipo in tipos_validos
-                   || {:error, transaccion.id, "Tipo de transaccion inválido: #{transaccion.tipo}"},
-         true <- transaccion.monto > 0
-                   || {:error, transaccion.id, "Monto negativo o cero"},
-         true <- Map.has_key?(monedas, transaccion.moneda_origen)
-                   || {:error, transaccion.id, "Moneda de origen inválida: #{transaccion.moneda_origen}"},
-         true <- transaccion.moneda_destino == "" or Map.has_key?(monedas, transaccion.moneda_destino)
-                   || {:error, transaccion.id, "Moneda de destino inválida: #{transaccion.moneda_destino}"},
-         true <- (transaccion.tipo != "transferencia") or (transaccion.cuenta_origen != "" and transaccion.cuenta_destino != "")
-                   || {:error, transaccion.id, "Transferencia debe tener cuenta_origen y cuenta_destino"},
-         true <- (transaccion.tipo != "swap") or (transaccion.cuenta_origen != "" and transaccion.moneda_destino != "")
-                   || {:error, transaccion.id, "Swap debe tener cuenta_origen y moneda_destino"},
-         true <- (transaccion.tipo != "alta_cuenta") or (transaccion.cuenta_origen != "" and transaccion.monto > 0)
-                   || {:error, transaccion.id, "Alta_cuenta debe tener cuenta_origen y monto positivo"},
-         true <- (transaccion.tipo != "transferencia") or
-                 (MapSet.member?(cuentas_activas, transaccion.cuenta_origen) and
-                  MapSet.member?(cuentas_activas, transaccion.cuenta_destino))
-                   || {:error, transaccion.id, "Cuenta no dada de alta en transferencia"},
-         true <- (transaccion.tipo != "swap") or
-                 MapSet.member?(cuentas_activas, transaccion.cuenta_origen)
-                   || {:error, transaccion.id, "Cuenta no dada de alta en swap"}
-    do
+    with true <-
+           transaccion.tipo in tipos_validos ||
+             {:error, transaccion.id, "Tipo de transaccion inválido: #{transaccion.tipo}"},
+         true <-
+           transaccion.monto > 0 ||
+             {:error, transaccion.id, "Monto negativo o cero"},
+         true <-
+           Map.has_key?(monedas, transaccion.moneda_origen) ||
+             {:error, transaccion.id, "Moneda de origen inválida: #{transaccion.moneda_origen}"},
+         true <-
+           transaccion.moneda_destino == "" or Map.has_key?(monedas, transaccion.moneda_destino) ||
+             {:error, transaccion.id, "Moneda de destino inválida: #{transaccion.moneda_destino}"},
+         true <-
+           transaccion.tipo != "transferencia" or
+             (transaccion.cuenta_origen != "" and transaccion.cuenta_destino != "") ||
+             {:error, transaccion.id, "Transferencia debe tener cuenta_origen y cuenta_destino"},
+         true <-
+           transaccion.tipo != "swap" or
+             (transaccion.cuenta_origen != "" and transaccion.moneda_destino != "") ||
+             {:error, transaccion.id, "Swap debe tener cuenta_origen y moneda_destino"},
+         true <-
+           transaccion.tipo != "alta_cuenta" or
+             (transaccion.cuenta_origen != "" and transaccion.monto > 0) ||
+             {:error, transaccion.id, "Alta_cuenta debe tener cuenta_origen y monto positivo"},
+         true <-
+           transaccion.tipo != "transferencia" or
+             (MapSet.member?(cuentas_activas, transaccion.cuenta_origen) and
+                MapSet.member?(cuentas_activas, transaccion.cuenta_destino)) ||
+             {:error, transaccion.id, "Cuenta no dada de alta en transferencia"},
+         true <-
+           transaccion.tipo != "swap" or
+             MapSet.member?(cuentas_activas, transaccion.cuenta_origen) ||
+             {:error, transaccion.id, "Cuenta no dada de alta en swap"} do
       :ok
     end
   end
@@ -88,8 +112,8 @@ defmodule Ledger.Transacciones do
       case String.split(arg, "=") do
         ["-c1", valor] -> Map.put(acc, :cuenta_origen, valor)
         ["-c2", valor] -> Map.put(acc, :cuenta_destino, valor)
-        ["-t", valor]  -> Map.put(acc, :archivo, valor)
-        ["-o", valor]  -> Map.put(acc, :archivo_salida, valor)
+        ["-t", valor] -> Map.put(acc, :archivo, valor)
+        ["-o", valor] -> Map.put(acc, :archivo_salida, valor)
         _ -> acc
       end
     end)
@@ -97,7 +121,7 @@ defmodule Ledger.Transacciones do
 
   defp aplicar_filtro_transaccion?(transaccion, cuenta_origen, cuenta_destino) do
     (is_nil(cuenta_origen) or transaccion.cuenta_origen == cuenta_origen) and
-    (is_nil(cuenta_destino) or transaccion.cuenta_destino == cuenta_destino)
+      (is_nil(cuenta_destino) or transaccion.cuenta_destino == cuenta_destino)
   end
 
   defp mostrar_transacciones_por_pantalla(transacciones) do
@@ -111,7 +135,6 @@ defmodule Ledger.Transacciones do
     end)
   end
 
-
   defp guardar_transacciones_csv(transacciones, ruta_archivo) do
     File.open!(ruta_archivo, [:write], fn file ->
       Enum.each(transacciones, fn transaccion ->
@@ -124,5 +147,4 @@ defmodule Ledger.Transacciones do
       end)
     end)
   end
-
 end
