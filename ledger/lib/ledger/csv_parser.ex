@@ -42,9 +42,12 @@ defmodule Ledger.CSVParser do
 
       case Float.parse(precio_str) do
         {precio, ""} -> {moneda, precio}
-        :error -> raise "Precio inválido en moneda #{moneda}: #{precio_str}"
+        :error ->
+          IO.puts("Error: No se pudo parsear el precio de #{moneda}, valor inválido: #{precio_str}")
+          exit(:error)
       end
     end)
     |> Enum.into(%{})
   end
+
 end

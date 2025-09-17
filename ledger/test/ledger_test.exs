@@ -59,10 +59,15 @@ defmodule LedgerTest do
     assert map_size(monedas) > 0
   end
 
-  test "lee monedas lanza error si hay precio inválido" do
-    assert_raise RuntimeError, ~r/Precio inválido en moneda ETH: asdc/, fn ->
-      Ledger.CSVParser.leer_monedas("casos_prueba/casos_moneda.csv")
-    end
+  test "leer_monedas lanza detecta si hay precio inválido" do
+    output =
+      ExUnit.CaptureIO.capture_io(fn ->
+        catch_exit(
+          Ledger.CSVParser.leer_monedas("casos_prueba/casos_moneda.csv")
+        )
+      end)
+
+    assert output =~ "Error: No se pudo parsear el precio de ETH, valor inválido: oso"
   end
 
   test "la función listar(transacciones) imprime por pantalla lo esperado" do
@@ -78,27 +83,53 @@ defmodule LedgerTest do
 
   test "La función listar(transacciones) detecta lineas mal formateadas" do
     output =
-      catch_exit(
-        ExUnit.CaptureIO.capture_io(fn ->
+      ExUnit.CaptureIO.capture_io(fn ->
+        catch_exit(
           Transacciones.listar(["-t=casos_prueba/caso3.csv"])
-        end)
-      )
+        )
+      end)
 
-    assert output == :error
+    assert output =~ "Error de formato en línea 5"
   end
 
-  test "Error cuando no se encuentra transacciones que coincidan con los filtros" do
+  test "La función listar(transacciones) detecta Tipo de Transaccion invalida" do
     output =
+      ExUnit.CaptureIO.capture_io(fn ->
+        catch_exit(
+          Transacciones.listar(["-t=casos_prueba/caso7.csv"])
+        )
+      end)
+
+    assert output =~ "Error en transaccion 1: Tipo de transaccion inválido: suma"
+  end
+
+  test "La función listar(transacciones) detecta monto negativo o cero" do
+    output =
+      ExUnit.CaptureIO.capture_io(fn ->
+        catch_exit(
+          Transacciones.listar(["-t=casos_prueba/caso8.csv"])
+        )
+      end)
+
+    assert output =~ "Error en transaccion 1: Monto negativo o cero"
+  end
+
+
+ test "Error cuando no se encuentra transacciones que coincidan con los filtros" do
+  output =
+    ExUnit.CaptureIO.capture_io(fn ->
       catch_exit(
-        ExUnit.CaptureIO.capture_io(fn ->
-          Transacciones.listar([
+        Transacciones.listar([
           "-t=transacciones.csv",
           "-c1=userA",
-          "-c2=userT" ])
-        end))
+          "-c2=userT"
+        ])
+      )
+    end)
 
-    assert output == :error
+    assert output =~ "Error: No se encontraron transacciones que coincidan con los filtros"
   end
+
 
   test "La función listar(transacciones) filtra por cuenta_origen y cuenta_destino correctamente" do
     output =
@@ -163,14 +194,15 @@ defmodule LedgerTest do
     File.rm("casos_prueba/salida_balance.csv")
   end
 
-  test "calcular muestra error si moneda es inválida" do
-    salida =
-      catch_exit(
-        ExUnit.CaptureIO.capture_io(fn ->
-          Ledger.Balance.calcular(["-c1=userA", "-m=da"])
-        end)
-      )
 
-    assert salida == :moneda_invalida
+  test "calcular muestra error si moneda es inválida" do
+    salida = ExUnit.CaptureIO.capture_io(fn ->
+      catch_exit(
+        Ledger.Balance.calcular(["-c1=userA", "-m=da"])
+      )
+    end)
+
+    assert salida =~ "Moneda inválida: da"
   end
+
 end
