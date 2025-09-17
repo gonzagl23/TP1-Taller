@@ -75,7 +75,7 @@ Se tomaron desiciones para los distintos manejos de errores:
     ejemplo:
     - ```./ledger transacciones -t=transacciones.csv -c1=userA -c2=user123 -o=salida.csv```
       
-      user123 no existe por que dara error: "Error: No se encontraron transacciones que coincidan con los filtros"
+      user123 no existe, por lo que dara error: "Error: No se encontraron transacciones que coincidan con los filtros"
 
 ## Manejo de Errores en Balance
 
@@ -87,7 +87,7 @@ Se tomaron desiciones para los distintos manejos de errores:
 
 - Si hay errores en las transacciones, el calculo de balance no se ejecuta
 
-- Si la flag `-m` tiene una moneda invalida, dara error
+- Si la flag `-m` tiene una moneda invalida que no esta en el csv de monedas, dara error
 
 
 
