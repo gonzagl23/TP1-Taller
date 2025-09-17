@@ -2,17 +2,19 @@
 
 ## Compilación
 
-1. Compilar el proyecto: ```mix compile```
+1. Entrar a la carpeta ledger: ```cd ledger```
 
-2. Crear el ejecutable hacer: ```mix escript.build```
+2. Compilar el proyecto: ```mix compile```
 
-3. Ejecutar las funciones disponibles :
+3. Crear el ejecutable hacer: ```mix escript.build```
+
+4. Ejecutar las funciones disponibles :
 - ```./ledger transacciones [flags]```
 - ```./ledger balance [flags]```
 
 Por ejemplo: 
 - ```./ledger transacciones -t=transacciones.csv -c1=userA -c2=userB -o=salida.csv```
-- ```./ledger balance -c1=123 -m=USDT -o=balance.csv```
+- ```./ledger balance -c1=userA -m=USDT -o=balance.csv```
 
 4. Para ejecutar los test: ```mix test```
 
