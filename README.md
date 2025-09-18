@@ -6,7 +6,7 @@
 
 2. Compilar el proyecto: ```mix compile```
 
-3. Crear el ejecutable hacer: ```mix escript.build```
+3. Crear el ejecutable: ```mix escript.build```
 
 4. Ejecutar las funciones disponibles :
 - ```./ledger transacciones [flags]```
@@ -26,8 +26,6 @@ Por ejemplo:
 
 ## Manejo de Errores en Transferencia
 
-Se tomaron desiciones para los distintos manejos de errores:
-
 - Se detecta lineas mal formateadas en el csv:
 
     ejemplo: 
@@ -45,11 +43,13 @@ Se tomaron desiciones para los distintos manejos de errores:
     - 1;1754937004;USDT;USDT;-100.50;userA;userB;transferencia
     - 4;8854937004;USDT;USDT;0.00;userA;userB;transferencia
 
-- Se valida que la moneda origen o moneda destina sean validas, es decir, que esten en el csv de monedas,por lo contrario dara error:
+- Se valida que la moneda origen o moneda destina sean validas, es decir, que esten en el csv de monedas:
     
     ejemplo: 
     - 1;1754937004;USDT;DOG;100.50;userA;userB;transferencia
     - 2;11754937004;BTTC;USDT;100.50;userA;userB;transferencia
+
+    DOG y BTTC no se encuentra en el csv de monedas por lo que dara error
 
 - Se valida que el tipo transferencia tenga una cuenta origen y cuenta destino, por lo contrario dara error:
 

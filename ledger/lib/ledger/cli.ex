@@ -1,11 +1,11 @@
 defmodule Ledger.CLI do
   def main(argv) do
     case argv do
-      ["transacciones" | rest] ->
-        Ledger.Transacciones.listar(rest)
+      ["transacciones" | flags] ->
+        Ledger.Transacciones.listar(flags)
 
-      ["balance" | rest] ->
-        Ledger.Balance.calcular(rest)
+      ["balance" | flags] ->
+        Ledger.Balance.calcular(flags)
 
       _caso_incorrecto ->
         IO.puts("Uso: ./ledger [transacciones|balance] [flags]")

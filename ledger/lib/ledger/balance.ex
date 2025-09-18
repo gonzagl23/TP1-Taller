@@ -133,7 +133,7 @@ defmodule Ledger.Balance do
         ["-m", valor] -> Map.put(acc, :moneda_destino, valor)
         ["-o", valor] -> Map.put(acc, :archivo_salida, valor)
         ["-t", valor] -> Map.put(acc, :archivo_transacciones, valor)
-        _ -> acc
+        _flag_incorrecto -> acc
       end
     end)
   end

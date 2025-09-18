@@ -37,8 +37,10 @@ defmodule Ledger.Transacciones do
     cuentas_activas =
       Enum.reduce(transacciones, MapSet.new(), fn
         {:ok, t}, acc when t.tipo == "alta_cuenta" -> MapSet.put(acc, t.cuenta_origen)
-        _, acc -> acc
+        _transaccion, acc -> acc
       end)
+
+    monedas = CSVParser.leer_monedas("monedas.csv")
 
     {errores, validas} =
       Enum.reduce(transacciones, {[], []}, fn
@@ -46,7 +48,7 @@ defmodule Ledger.Transacciones do
           {["Error de formato en línea #{numero_linea}" | errs], oks}
 
         {:ok, transaccion}, {errs, oks} ->
-          case validar_transaccion(transaccion, cuentas_activas) do
+          case validar_transaccion(transaccion, cuentas_activas, monedas) do
             :ok ->
               if aplicar_filtro_transaccion?(transaccion, cuenta_origen, cuenta_destino) do
                 {errs, [transaccion | oks]}
@@ -66,8 +68,7 @@ defmodule Ledger.Transacciones do
     end
   end
 
-  defp validar_transaccion(transaccion, cuentas_activas) do
-    monedas = CSVParser.leer_monedas("monedas.csv")
+  defp validar_transaccion(transaccion, cuentas_activas, monedas) do
     tipos_validos = ["transferencia", "swap", "alta_cuenta"]
 
     with true <-
@@ -114,7 +115,7 @@ defmodule Ledger.Transacciones do
         ["-c2", valor] -> Map.put(acc, :cuenta_destino, valor)
         ["-t", valor] -> Map.put(acc, :archivo, valor)
         ["-o", valor] -> Map.put(acc, :archivo_salida, valor)
-        _ -> acc
+        _flag_incorrecto -> acc
       end
     end)
   end
