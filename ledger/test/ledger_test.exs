@@ -11,7 +11,7 @@ defmodule LedgerTest do
         CLI.main(["argumento_incorrecto"])
       end)
 
-    assert output =~ "Uso: ./ledger [transacciones|balance] [flags]"
+    assert output =~ "Uso: ./ledger [Funcion] [flags]"
   end
 
   test "llama a Transacciones.listar con los flags correctos" do
