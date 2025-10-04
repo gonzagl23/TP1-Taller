@@ -5,10 +5,10 @@ defmodule Ledger.Usuarios.Usuario do
   @required_fields [:nombre_usuario, :fecha_nacimiento]
 
   schema "usuarios" do
-      field :nombre_usuario, :string
-      field :fecha_nacimiento, :date
+    field :nombre_usuario, :string
+    field :fecha_nacimiento, :date
 
-      timestamps(inserted_at: :fecha_creacion, updated_at: :fecha_edicion)
+    timestamps(inserted_at: :fecha_creacion, updated_at: :updated_at)
   end
 
   def changeset_crear(usuario, attrs) do
@@ -22,8 +22,7 @@ defmodule Ledger.Usuarios.Usuario do
   def changeset_editar(%__MODULE__{} = usuario, attrs) do
     usuario
     |> cast(attrs, [:nombre_usuario])
-    |> validate_required([:nombre_usuario])
-    |> validar_nombre_distinto(usuario, :nombre_usuario)
+    |> validar_nombre_distinto()
     |> unique_constraint(:nombre_usuario)
   end
 
@@ -45,12 +44,12 @@ defmodule Ledger.Usuarios.Usuario do
     if (hoy.month < m) or (hoy.month == m and hoy.day < d), do: años - 1, else: años
   end
 
-  defp validar_nombre_distinto(changeset, %__MODULE__{nombre_usuario: anterior}, field) do
-    case get_change(changeset, field) do
+  defp validar_nombre_distinto(changeset) do
+    anterior = changeset.data.nombre_usuario
+    case get_change(changeset, :nombre_usuario) do
       nil -> changeset
-      ^anterior -> add_error(changeset, field, "el nombre de usuario debe ser distinto al anterior")
+      ^anterior -> add_error(changeset, :nombre_usuario, "el nombre de usuario debe ser distinto al anterior")
       _ -> changeset
     end
   end
-
 end

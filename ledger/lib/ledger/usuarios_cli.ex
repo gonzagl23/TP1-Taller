@@ -29,24 +29,26 @@ defmodule Ledger.UsuariosCLI do
 
   def editar(flags) do
     opts = parsear_flags(flags)
+    id = String.to_integer(opts[:id])
+    nuevo_nombre = opts[:nombre_usuario]
 
-    case Usuarios.ver_usuario(String.to_integer(opts[:id])) do
+    case Usuarios.ver_usuario(id) do
       {:ok, usuario} ->
-        case Usuarios.editar_usuario(usuario, %{"nombre_usuario" => opts[:nombre_usuario]}) do
-          {:ok, usuario} ->
-            IO.inspect(usuario)
-
-          {:error, changeset} ->
-            errores =
-              changeset.errors
-              |> Enum.map(fn {campo, {mensaje, _}} -> "#{campo}: #{mensaje}" end)
-              |> Enum.join(", ")
-
-            IO.inspect({:error, :editar_usuario, errores})
+        if nuevo_nombre == usuario.nombre_usuario do
+          IO.puts("El nombre de usuario debe ser distinto al anterior")
+        else
+          cambios = %{nombre_usuario: nuevo_nombre}
+          case Usuarios.editar_usuario(usuario, cambios) do
+            {:ok, usuario_editado} ->
+              IO.puts("Usuario editado correctamente")
+              IO.inspect(usuario_editado)
+            {:error, changeset} ->
+              IO.inspect(changeset.errors, label: "Errores al editar")
+          end
         end
 
-      {:error, _} ->
-        IO.inspect({:error, :editar_usuario, "El usuario no existe"})
+      {:error, :ver_usuario, _msg} ->
+        IO.puts("El usuario no existe")
     end
   end
 
@@ -59,12 +61,12 @@ defmodule Ledger.UsuariosCLI do
           {:ok, _} ->
             IO.puts("Usuario borrado correctamente")
 
-          {:error, :usuario_con_transacciones} ->
-            IO.inspect({:error, :borrar_usuario, "El usuario tiene transacciones asociadas"})
+          {:error, :borrar_usuario, mensaje} ->
+            IO.puts("No se puede borrar el usuario: #{mensaje}")
         end
 
-      {:error, _} ->
-        IO.inspect({:error, :borrar_usuario, "El usuario no existe"})
+      {:error, :ver_usuario, _msg} ->
+        IO.puts("No se puede borrar el usuario: el usuario no existe")
     end
   end
 
@@ -76,8 +78,8 @@ defmodule Ledger.UsuariosCLI do
       {:ok, usuario} ->
         IO.inspect(usuario)
 
-      {:error, _} ->
-        IO.inspect({:error, :ver_usuario, "El usuario no existe"})
+      {:error, _tipo, mensaje} ->
+        IO.puts("Error: #{mensaje}")
     end
   end
 

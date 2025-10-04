@@ -15,16 +15,42 @@ defmodule Ledger.TransaccionesDB.Transaccion do
     belongs_to :moneda_origen, Moneda
     belongs_to :moneda_destino, Moneda
 
-    timestamps()
+    timestamps(inserted_at: :fecha_creacion, updated_at: :fecha_edicion)
   end
 
-  @required_fields [:cuenta_origen_id, :cuenta_destino_id, :moneda_origen_id, :moneda_destino_id, :monto, :tipo]
-
-  def changeset_crear(transaccion, attrs) do
+  def changeset_alta_cuenta(transaccion, attrs) do
     transaccion
-    |> cast(attrs, @required_fields)
-    |> validate_required(@required_fields)
+    |> cast(attrs, [:cuenta_origen_id, :moneda_origen_id, :monto, :tipo])
+    |> validate_required([:cuenta_origen_id, :moneda_origen_id, :monto, :tipo])
     |> validate_number(:monto, greater_than: 0)
-    |> validate_inclusion(:tipo, ["alta_cuenta", "transferencia", "swap", "deshacer"])
+    |> validate_inclusion(:tipo, ["alta_cuenta"])
+  end
+
+  def changeset_transferencia(transaccion, attrs) do
+    transaccion
+    |> cast(attrs, [:cuenta_origen_id, :cuenta_destino_id, :moneda_origen_id, :moneda_destino_id, :monto, :tipo])
+    |> validate_required([:cuenta_origen_id, :cuenta_destino_id, :moneda_origen_id, :moneda_destino_id, :monto, :tipo])
+    |> validate_number(:monto, greater_than: 0)
+    |> validate_inclusion(:tipo, ["transferencia"])
+    |> validar_misma_moneda()
+  end
+
+  def changeset_swap(transaccion, attrs) do
+    transaccion
+    |> cast(attrs, [:cuenta_origen_id, :moneda_origen_id, :moneda_destino_id, :monto, :tipo])
+    |> validate_required([:cuenta_origen_id, :moneda_origen_id, :moneda_destino_id, :monto, :tipo])
+    |> validate_number(:monto, greater_than: 0)
+    |> validate_inclusion(:tipo, ["swap"])
+  end
+
+  defp validar_misma_moneda(changeset) do
+    origen = get_field(changeset, :moneda_origen_id)
+    destino = get_field(changeset, :moneda_destino_id)
+
+    if origen && destino && origen != destino do
+      add_error(changeset, :moneda_destino_id, "debe ser igual a la moneda de origen")
+    else
+      changeset
+    end
   end
 end

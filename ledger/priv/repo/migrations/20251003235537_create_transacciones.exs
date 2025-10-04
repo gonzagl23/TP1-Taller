@@ -5,9 +5,9 @@ defmodule Ledger.Repo.Migrations.CreateTransacciones do
     create table(:transacciones) do
       add :timestamp, :naive_datetime, null: false, default: fragment("NOW()")
       add :moneda_origen_id, references(:monedas, on_delete: :restrict), null: false
-      add :moneda_destino_id, references(:monedas, on_delete: :restrict), null: false
+      add :moneda_destino_id, references(:monedas, on_delete: :restrict), null: true
       add :cuenta_origen_id, references(:usuarios, on_delete: :restrict), null: false
-      add :cuenta_destino_id, references(:usuarios, on_delete: :restrict), null: false
+      add :cuenta_destino_id, references(:usuarios, on_delete: :restrict), null: true
       add :monto, :float, null: false
       add :tipo, :string, null: false
 

@@ -16,7 +16,7 @@ defmodule Ledger.Monedas.Moneda do
     |> cast(attrs, @required_fields)
     |> validate_required(@required_fields)
     |> validar_nombre_mayusculas_y_longitud(:nombre_moneda)
-    |> validate_number(:precio_dolares, greater_than_por_equal_to: 0)
+    |> validate_number(:precio_dolares, greater_than_or_equal_to: 0, message: "No puede ser negativo")
     |> unique_constraint(:nombre_moneda)
   end
 
@@ -24,7 +24,7 @@ defmodule Ledger.Monedas.Moneda do
     moneda
     |> cast(attrs, [:precio_dolares])
     |> validate_required([:precio_dolares])
-    |> validate_number(:precio_dolares, greater_than_or_equal_to: 0)
+    |> validate_number(:precio_dolares, greater_than_or_equal_to: 0, message: "No puede ser negativo")
   end
 
   defp validar_nombre_mayusculas_y_longitud(changeset, field) do

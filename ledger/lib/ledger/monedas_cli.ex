@@ -28,38 +28,36 @@ defmodule Ledger.MonedasCLI do
   end
 
   def editar(flags) do
-    opts = parsear_flags(flags)
+    id = parsear_flags(flags)[:id] |> String.to_integer()
+    nuevo_precio = parsear_flags(flags)[:precio_dolares]
 
-    case Monedas.ver_moneda(String.to_integer(opts[:id])) do
+    case Monedas.ver_moneda(id) do
       {:ok, moneda} ->
-        case parse_precio(opts[:precio_dolares]) do
-          {:ok, precio} ->
-            case Monedas.editar_moneda(moneda, %{"precio_dolares" => precio}) do
-              {:ok, moneda} ->
-                IO.inspect(moneda)
+        cambios = if nuevo_precio, do: %{precio_dolares: nuevo_precio}, else: %{}
+        if cambios == %{} do
+          IO.puts("No hay cambios para aplicar")
+        else
+          case Monedas.editar_moneda(moneda, cambios) do
+            {:ok, moneda_editada} ->
+              IO.puts("Moneda editada correctamente")
+              IO.inspect(moneda_editada)
 
-              {:error, changeset} ->
-                errores =
-                  changeset.errors
-                  |> Enum.map(fn {campo, {mensaje, _}} -> "#{campo}: #{mensaje}" end)
-                  |> Enum.join(", ")
-
-                IO.inspect({:error, :editar_moneda, errores})
-            end
-
-          {:error, msg} ->
-            IO.inspect({:error, :editar_moneda, msg})
+            {:error, changeset} ->
+              IO.inspect(changeset.errors, label: "Errores al editar")
+          end
         end
 
-      {:error, _} ->
-        IO.inspect({:error, :editar_moneda, "La moneda no existe"})
+      {:error, :ver_moneda, msg} ->
+        IO.puts(msg)
     end
   end
 
+
   def borrar(flags) do
     opts = parsear_flags(flags)
+    id = String.to_integer(opts[:id])
 
-    case Monedas.ver_moneda(String.to_integer(opts[:id])) do
+    case Monedas.ver_moneda(id) do
       {:ok, moneda} ->
         case Monedas.borrar_moneda(moneda) do
           {:ok, _} ->
@@ -68,29 +66,29 @@ defmodule Ledger.MonedasCLI do
           {:error, :borrar_moneda, msg} ->
             IO.inspect({:error, :borrar_moneda, msg})
 
-          {:error, :moneda_con_transacciones} ->
-            IO.inspect({:error, :borrar_moneda, "La moneda tiene transacciones asociadas"})
-
           {:error, reason} ->
             IO.inspect({:error, :borrar_moneda, "No se pudo borrar la moneda: #{inspect(reason)}"})
         end
 
-      {:error, _} ->
-        IO.inspect({:error, :borrar_moneda, "La moneda no existe"})
+      {:error, :ver_moneda, msg} ->
+        IO.inspect({:error, :ver_moneda, msg})
     end
   end
 
-  def ver(flags) do
-    opts = parsear_flags(flags)
 
-    case Monedas.ver_moneda(String.to_integer(opts[:id])) do
+
+  def ver(flags) do
+    id = parsear_flags(flags)[:id] |> String.to_integer()
+
+    case Monedas.ver_moneda(id) do
       {:ok, moneda} ->
         IO.inspect(moneda)
 
-      {:error, _} ->
-        IO.inspect({:error, :ver_moneda, "La moneda no existe"})
+      {:error, :ver_moneda, msg} ->
+        IO.puts(msg)
     end
   end
+
 
   defp parsear_flags(args) do
     Enum.reduce(args, %{}, fn arg, acc ->

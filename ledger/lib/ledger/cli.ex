@@ -1,5 +1,13 @@
 defmodule Ledger.CLI do
   def main(argv) do
+    case Application.ensure_all_started(:ledger) do
+      {:ok, _} -> :ok
+      {:error, {:already_started, _}} -> :ok
+      {:error, reason} ->
+        IO.puts("No se pudo iniciar la aplicación: #{inspect(reason)}")
+        System.halt(1)
+    end
+
     case argv do
       ["transacciones" | flags] ->
         Ledger.Transacciones.listar(flags)
