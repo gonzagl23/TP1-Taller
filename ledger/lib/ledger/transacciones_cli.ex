@@ -92,7 +92,7 @@ defmodule Ledger.TransaccionesCLI do
         ["-m", valor] -> Map.put(acc, :moneda, valor)
         ["-mo", valor] -> Map.put(acc, :moneda_origen, valor)
         ["-md", valor] -> Map.put(acc, :moneda_destino, valor)
-        ["-mm", valor] -> Map.put(acc, :monto, valor)
+        ["-a", valor] -> Map.put(acc, :monto, valor)
         ["-id", valor] -> Map.put(acc, :id, valor)
         _ -> acc
       end

@@ -8,7 +8,7 @@ defmodule Ledger.Usuarios.Usuario do
     field :nombre_usuario, :string
     field :fecha_nacimiento, :date
 
-    timestamps(inserted_at: :fecha_creacion, updated_at: :updated_at)
+    timestamps(inserted_at: :fecha_creacion, updated_at: :fecha_edicion)
   end
 
   def changeset_crear(usuario, attrs) do

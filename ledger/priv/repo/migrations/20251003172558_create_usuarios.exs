@@ -6,10 +6,9 @@ defmodule Ledger.Repo.Migrations.CreateUsuarios do
       add :nombre_usuario, :string, null: false
       add :fecha_nacimiento, :date, null: false
 
-      timestamps(inserted_at: :fecha_creacion, update_at: :fecha_edicion, null: false)
+      timestamps(inserted_at: :fecha_creacion, updated_at: :fecha_edicion, null: false)
     end
 
     create unique_index(:usuarios, [:nombre_usuario])
-
   end
 end

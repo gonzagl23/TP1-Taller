@@ -10,7 +10,8 @@ defmodule Ledger.MixProject do
       deps: deps(),
       escript: escript(),
       test_coverage: [tool: ExCoveralls],
-      preferred_cli_env: [coveralls: :test]
+      preferred_cli_env: [coveralls: :test],
+      aliases: aliases()
     ]
   end
 
@@ -36,4 +37,13 @@ defmodule Ledger.MixProject do
       {:postgrex, ">= 0.0.0"}
     ]
   end
+
+  defp aliases do
+  [
+    "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
+    "ecto.reset": ["ecto.drop", "ecto.setup"]
+  ]
+  end
+
+
 end

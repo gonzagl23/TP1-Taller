@@ -5,6 +5,7 @@ defmodule LedgerTest do
   alias Ledger.Balance
   alias Ledger.CLI
 
+
   test "muestra mensaje de uso cuando los argumentos son incorrectos" do
     output =
       ExUnit.CaptureIO.capture_io(fn ->
@@ -204,5 +205,7 @@ defmodule LedgerTest do
 
     assert salida =~ "Moneda inválida: da"
   end
+
+
 
 end
