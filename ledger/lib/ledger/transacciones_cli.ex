@@ -29,19 +29,18 @@ defmodule Ledger.TransaccionesCLI do
       IO.inspect({:error, :realizar_transferencia, "Monto invalido o faltante"})
     else
       case TransaccionesDB.realizar_transferencia(%{
-             "cuenta_origen_id" => String.to_integer(opts[:origen]),
-             "cuenta_destino_id" => String.to_integer(opts[:destino]),
-             "moneda_origen_id" => String.to_integer(opts[:moneda_origen]),
-             "moneda_destino_id" => String.to_integer(opts[:moneda_destino]),
-             "monto" => monto,
-             "tipo" => "transferencia"
-           }) do
+            "cuenta_origen_id" => String.to_integer(opts[:origen]),
+            "cuenta_destino_id" => String.to_integer(opts[:destino]),
+            "moneda_id" => String.to_integer(opts[:moneda]),
+            "monto" => monto
+          }) do
         {:ok, transaccion} -> IO.inspect(transaccion)
         {:error, :realizar_transferencia, mensaje} -> IO.inspect({:error, :realizar_transferencia, mensaje})
         {:error, changeset} -> mostrar_errores(:realizar_transferencia, changeset)
       end
     end
   end
+
 
   def realizar_swap(flags) do
     opts = parsear_flags(flags)

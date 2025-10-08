@@ -35,20 +35,24 @@ defmodule Ledger.TransaccionesDB do
 
   def realizar_transferencia(attrs) do
     with {:ok, _origen} <- validar_usuario(attrs["cuenta_origen_id"]),
-         {:ok, _destino} <- validar_usuario(attrs["cuenta_destino_id"]),
-         {:ok, _moneda_origen} <- validar_moneda(attrs["moneda_origen_id"]),
-         {:ok, _moneda_destino} <- validar_moneda(attrs["moneda_destino_id"]),
-         {:ok, _} <- validar_alta_cuenta(attrs["cuenta_origen_id"], attrs["moneda_origen_id"]),
-         {:ok, _} <- validar_alta_cuenta(attrs["cuenta_destino_id"], attrs["moneda_destino_id"]),
-         true <- attrs["moneda_origen_id"] == attrs["moneda_destino_id"] do
+        {:ok, _destino} <- validar_usuario(attrs["cuenta_destino_id"]),
+        {:ok, _moneda} <- validar_moneda(attrs["moneda_id"]),
+        {:ok, _} <- validar_alta_cuenta(attrs["cuenta_origen_id"], attrs["moneda_id"]),
+        {:ok, _} <- validar_alta_cuenta(attrs["cuenta_destino_id"], attrs["moneda_id"]) do
       %Transaccion{}
-      |> Transaccion.changeset_transferencia(attrs)
+      |> Transaccion.changeset_transferencia(%{
+          "cuenta_origen_id" => attrs["cuenta_origen_id"],
+          "cuenta_destino_id" => attrs["cuenta_destino_id"],
+          "moneda_origen_id" => attrs["moneda_id"],
+          "monto" => attrs["monto"],
+          "tipo" => "transferencia"
+        })
       |> Repo.insert()
     else
       {:error, mensaje} -> {:error, :realizar_transferencia, mensaje}
-      false -> {:error, :realizar_transferencia, "La moneda de origen y destino debe ser la misma"}
     end
   end
+
 
   def realizar_swap(attrs) do
     with {:ok, _usuario} <- validar_usuario(attrs["cuenta_origen_id"]),

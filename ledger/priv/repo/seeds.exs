@@ -110,7 +110,6 @@ IO.puts("Creando transacciones...")
     cuenta_origen_id: u1.id,
     cuenta_destino_id: u2.id,
     moneda_origen_id: m1.id,
-    moneda_destino_id: m1.id,
     monto: 10.00,
     tipo: "transferencia"
   }

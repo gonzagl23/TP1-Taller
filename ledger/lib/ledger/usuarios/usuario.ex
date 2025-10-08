@@ -46,10 +46,24 @@ defmodule Ledger.Usuarios.Usuario do
 
   defp validar_nombre_distinto(changeset) do
     anterior = changeset.data.nombre_usuario
-    case get_change(changeset, :nombre_usuario) do
+
+    nomnbre_enviado =
+      cond do
+        is_map(changeset.params) and Map.has_key?(changeset.params, "nombre_usuario") ->
+          Map.get(changeset.params, "nombre_usuario")
+
+        is_map(changeset.params) and Map.has_key?(changeset.params, :nombre_usuario) ->
+          Map.get(changeset.params, :nombre_usuario)
+
+        true ->
+          Ecto.Changeset.get_change(changeset, :nombre_usuario)
+      end
+
+    case nomnbre_enviado do
       nil -> changeset
-      ^anterior -> add_error(changeset, :nombre_usuario, "el nombre de usuario debe ser distinto al anterior")
+      ^anterior -> Ecto.Changeset.add_error(changeset, :nombre_usuario, "el nombre de usuario debe ser distinto al anterior")
       _ -> changeset
     end
   end
+
 end

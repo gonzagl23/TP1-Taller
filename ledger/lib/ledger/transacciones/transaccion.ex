@@ -28,12 +28,12 @@ defmodule Ledger.TransaccionesDB.Transaccion do
 
   def changeset_transferencia(transaccion, attrs) do
     transaccion
-    |> cast(attrs, [:cuenta_origen_id, :cuenta_destino_id, :moneda_origen_id, :moneda_destino_id, :monto, :tipo])
-    |> validate_required([:cuenta_origen_id, :cuenta_destino_id, :moneda_origen_id, :moneda_destino_id, :monto, :tipo])
+    |> cast(attrs, [:cuenta_origen_id, :cuenta_destino_id, :moneda_origen_id, :monto, :tipo])
+    |> validate_required([:cuenta_origen_id, :cuenta_destino_id, :moneda_origen_id, :monto, :tipo])
     |> validate_number(:monto, greater_than: 0)
     |> validate_inclusion(:tipo, ["transferencia"])
-    |> validar_misma_moneda()
   end
+
 
   def changeset_swap(transaccion, attrs) do
     transaccion
@@ -43,14 +43,4 @@ defmodule Ledger.TransaccionesDB.Transaccion do
     |> validate_inclusion(:tipo, ["swap"])
   end
 
-  defp validar_misma_moneda(changeset) do
-    origen = get_field(changeset, :moneda_origen_id)
-    destino = get_field(changeset, :moneda_destino_id)
-
-    if origen && destino && origen != destino do
-      add_error(changeset, :moneda_destino_id, "debe ser igual a la moneda de origen")
-    else
-      changeset
-    end
-  end
 end

@@ -7,3 +7,5 @@ config :ledger, Ledger.Repo,
   hostname: "localhost"
 
 config :ledger, ecto_repos: [Ledger.Repo]
+
+import_config "#{config_env()}.exs"
