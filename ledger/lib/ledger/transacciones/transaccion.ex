@@ -5,6 +5,8 @@ defmodule Ledger.TransaccionesDB.Transaccion do
   alias Ledger.Usuarios.Usuario
   alias Ledger.Monedas.Moneda
 
+  @tipos_validos ["alta_cuenta", "transferencia", "swap", "deshacer"]
+
   schema "transacciones" do
     field :monto, :float
     field :tipo, :string
@@ -18,29 +20,31 @@ defmodule Ledger.TransaccionesDB.Transaccion do
     timestamps(inserted_at: :fecha_creacion, updated_at: :fecha_edicion)
   end
 
+  def changeset_transaccion(transaccion, attrs) do
+    transaccion
+    |> cast(attrs, [:cuenta_origen_id, :cuenta_destino_id, :moneda_origen_id, :moneda_destino_id, :monto, :tipo])
+    |> validate_required([:cuenta_origen_id, :monto, :tipo])
+    |> validate_number(:monto, greater_than: 0)
+    |> validate_inclusion(:tipo, @tipos_validos)
+  end
+
   def changeset_alta_cuenta(transaccion, attrs) do
     transaccion
-    |> cast(attrs, [:cuenta_origen_id, :moneda_origen_id, :monto, :tipo])
-    |> validate_required([:cuenta_origen_id, :moneda_origen_id, :monto, :tipo])
-    |> validate_number(:monto, greater_than: 0)
+    |> changeset_transaccion(attrs)
     |> validate_inclusion(:tipo, ["alta_cuenta"])
   end
 
   def changeset_transferencia(transaccion, attrs) do
     transaccion
-    |> cast(attrs, [:cuenta_origen_id, :cuenta_destino_id, :moneda_origen_id, :monto, :tipo])
-    |> validate_required([:cuenta_origen_id, :cuenta_destino_id, :moneda_origen_id, :monto, :tipo])
-    |> validate_number(:monto, greater_than: 0)
-    |> validate_inclusion(:tipo, ["transferencia"])
+    |> changeset_transaccion(attrs)
+    |> validate_required([:cuenta_destino_id, :moneda_origen_id])
+    |> validate_inclusion(:tipo, ["transferencia", "deshacer"])
   end
-
 
   def changeset_swap(transaccion, attrs) do
     transaccion
-    |> cast(attrs, [:cuenta_origen_id, :moneda_origen_id, :moneda_destino_id, :monto, :tipo])
-    |> validate_required([:cuenta_origen_id, :moneda_origen_id, :moneda_destino_id, :monto, :tipo])
-    |> validate_number(:monto, greater_than: 0)
+    |> changeset_transaccion(attrs)
+    |> validate_required([:moneda_destino_id])
     |> validate_inclusion(:tipo, ["swap"])
   end
-
 end

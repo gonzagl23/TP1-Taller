@@ -66,20 +66,34 @@ defmodule Ledger.TransaccionesCLI do
   def deshacer_transaccion(flags) do
     opts = parsear_flags(flags)
 
-    case TransaccionesDB.deshacer_transaccion(String.to_integer(opts[:id])) do
-      {:ok, transaccion} -> IO.inspect(transaccion)
-      {:error, :deshacer_transaccion, mensaje} -> IO.inspect({:error, :deshacer_transaccion, mensaje})
+    case Integer.parse(opts[:id] || "") do
+      {id, ""} ->
+        case TransaccionesDB.deshacer_transaccion(id) do
+          {:ok, transaccion} -> IO.inspect(transaccion)
+          {:error, :deshacer_transaccion, mensaje} -> IO.inspect({:error, :deshacer_transaccion, mensaje})
+        end
+
+      :error ->
+        IO.inspect({:error, :deshacer_transaccion, "ID inválido"})
     end
   end
+
 
   def ver_transaccion(flags) do
     opts = parsear_flags(flags)
 
-    case TransaccionesDB.ver_transaccion(String.to_integer(opts[:id])) do
-      {:ok, transaccion} -> mostrar_transaccion(transaccion)
-      {:error, :ver_transaccion, mensaje} -> IO.puts("Error: #{mensaje}")
+    case Integer.parse(opts[:id] || "") do
+      {id, ""} ->
+        case TransaccionesDB.ver_transaccion(id) do
+          {:ok, transaccion} -> mostrar_transaccion(transaccion)
+          {:error, :ver_transaccion, mensaje} -> IO.puts("Error: #{mensaje}")
+        end
+
+      :error ->
+        IO.puts("Error: ID inválido")
     end
   end
+
 
 
   defp parsear_flags(args) do

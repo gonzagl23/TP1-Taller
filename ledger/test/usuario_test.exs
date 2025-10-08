@@ -3,7 +3,6 @@ defmodule Ledger.UsuariosTest do
   import ExUnit.CaptureIO
   alias Ledger.Repo
   alias Ledger.Usuarios
-  alias Ledger.UsuariosCLI
 
   setup do
     :ok = Ecto.Adapters.SQL.Sandbox.checkout(Repo)
@@ -19,7 +18,37 @@ defmodule Ledger.UsuariosTest do
     test "no crea usuario menor de 18 años" do
       attrs = %{"nombre_usuario" => "Pepe", "fecha_nacimiento" => Date.utc_today()}
       {:error, changeset} = Usuarios.crear_usuario(attrs)
-      assert {"el usuario debe tener al menos 18 años", _} = changeset.errors[:fecha_nacimiento]
+      assert Enum.any?(changeset.errors, fn
+        {:fecha_nacimiento, {"el usuario debe tener al menos 18 años", _}} -> true
+        _ -> false
+      end)
+    end
+
+    test "no crea usuario sin nombre" do
+      attrs = %{"fecha_nacimiento" => ~D[1990-01-01]}
+      {:error, changeset} = Usuarios.crear_usuario(attrs)
+      assert Enum.any?(changeset.errors, fn
+        {:nombre_usuario, {"can't be blank", _}} -> true
+        _ -> false
+      end)
+    end
+
+    test "no crea usuario sin fecha de nacimiento" do
+      attrs = %{"nombre_usuario" => "Ana"}
+      {:error, changeset} = Usuarios.crear_usuario(attrs)
+      assert Enum.any?(changeset.errors, fn
+        {:fecha_nacimiento, {"can't be blank", _}} -> true
+        _ -> false
+      end)
+    end
+
+    test "no permite crear usuario con nombre duplicado" do
+      {:ok, _u1} = Usuarios.crear_usuario(%{"nombre_usuario" => "Luis", "fecha_nacimiento" => ~D[1990-01-01]})
+      {:error, changeset} = Usuarios.crear_usuario(%{"nombre_usuario" => "Luis", "fecha_nacimiento" => ~D[1990-01-01]})
+      assert Enum.any?(changeset.errors, fn
+        {:nombre_usuario, {"has already been taken", _}} -> true
+        _ -> false
+      end)
     end
   end
 
@@ -31,7 +60,7 @@ defmodule Ledger.UsuariosTest do
     end
 
     test "error si usuario no existe" do
-      assert {:error, :ver_usuario, _} = Usuarios.ver_usuario(4)
+      assert {:error, :ver_usuario, _} = Usuarios.ver_usuario(999)
     end
   end
 
@@ -45,7 +74,20 @@ defmodule Ledger.UsuariosTest do
     test "no permite cambiar al mismo nombre" do
       {:ok, usuario} = Usuarios.crear_usuario(%{"nombre_usuario" => "Marta", "fecha_nacimiento" => ~D[1990-01-01]})
       {:error, changeset} = Usuarios.editar_usuario(usuario, %{nombre_usuario: "Marta"})
-      assert {"el nombre de usuario debe ser distinto al anterior", _} = changeset.errors[:nombre_usuario]
+      assert Enum.any?(changeset.errors, fn
+        {:nombre_usuario, {"el nombre de usuario debe ser distinto al anterior", _}} -> true
+        _ -> false
+      end)
+    end
+
+    test "no permite cambiar a un nombre existente" do
+      {:ok, _u1} = Usuarios.crear_usuario(%{"nombre_usuario" => "Luis", "fecha_nacimiento" => ~D[1990-01-01]})
+      {:ok, usuario2} = Usuarios.crear_usuario(%{"nombre_usuario" => "Marta", "fecha_nacimiento" => ~D[1990-01-01]})
+      {:error, changeset} = Usuarios.editar_usuario(usuario2, %{nombre_usuario: "Luis"})
+      assert Enum.any?(changeset.errors, fn
+        {:nombre_usuario, {"has already been taken", _}} -> true
+        _ -> false
+      end)
     end
   end
 
@@ -57,12 +99,11 @@ defmodule Ledger.UsuariosTest do
     end
   end
 
-
   describe "UsuariosCLI" do
     test "crear CLI con usuario válido" do
       output =
         capture_io(fn ->
-          UsuariosCLI.crear(["-n=Pedro", "-b=1990-05-05"])
+          Ledger.CLI.main(["crear_usuario", "-n=Pedro", "-b=1990-05-05"])
         end)
 
       assert output =~ "Pedro"
@@ -72,7 +113,7 @@ defmodule Ledger.UsuariosTest do
     test "crear CLI con fecha inválida" do
       output =
         capture_io(fn ->
-          UsuariosCLI.crear(["-n=Pedro", "-b=2025-01-01"])
+          Ledger.CLI.main(["crear_usuario", "-n=Pedro", "-b=2025-01-01"])
         end)
 
       assert output =~ "Fecha invalida" or output =~ "el usuario debe tener al menos 18 años"
@@ -83,7 +124,7 @@ defmodule Ledger.UsuariosTest do
 
       output =
         capture_io(fn ->
-          UsuariosCLI.editar(["-id=#{usuario.id}", "-n=Anita"])
+          Ledger.CLI.main(["editar_usuario", "-id=#{usuario.id}", "-n=Anita"])
         end)
 
       assert output =~ "Usuario editado correctamente"
@@ -95,7 +136,7 @@ defmodule Ledger.UsuariosTest do
 
       output =
         capture_io(fn ->
-          UsuariosCLI.editar(["-id=#{usuario.id}", "-n=Luis"])
+          Ledger.CLI.main(["editar_usuario", "-id=#{usuario.id}", "-n=Luis"])
         end)
 
       assert output =~ "El nombre de usuario debe ser distinto al anterior"
@@ -106,7 +147,7 @@ defmodule Ledger.UsuariosTest do
 
       output =
         capture_io(fn ->
-          UsuariosCLI.borrar(["-id=#{usuario.id}"])
+          Ledger.CLI.main(["borrar_usuario", "-id=#{usuario.id}"])
         end)
 
       assert output =~ "Usuario borrado correctamente"
@@ -115,7 +156,7 @@ defmodule Ledger.UsuariosTest do
     test "borrar CLI usuario inexistente" do
       output =
         capture_io(fn ->
-          UsuariosCLI.borrar(["-id=999"])
+          Ledger.CLI.main(["borrar_usuario", "-id=999"])
         end)
 
       assert output =~ "No se puede borrar el usuario"
@@ -126,7 +167,7 @@ defmodule Ledger.UsuariosTest do
 
       output =
         capture_io(fn ->
-          UsuariosCLI.ver(["-id=#{usuario.id}"])
+          Ledger.CLI.main(["ver_usuario", "-id=#{usuario.id}"])
         end)
 
       assert output =~ "Juan"
@@ -135,10 +176,11 @@ defmodule Ledger.UsuariosTest do
     test "ver CLI usuario inexistente" do
       output =
         capture_io(fn ->
-          UsuariosCLI.ver(["-id=999"])
+          Ledger.CLI.main(["ver_usuario", "-id=999"])
         end)
 
       assert output =~ "Error"
     end
   end
+
 end

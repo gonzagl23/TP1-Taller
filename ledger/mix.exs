@@ -1,19 +1,20 @@
 defmodule Ledger.MixProject do
   use Mix.Project
 
-  def project do
-    [
-      app: :ledger,
-      version: "0.1.0",
-      elixir: "~> 1.17",
-      start_permanent: Mix.env() == :prod,
-      deps: deps(),
-      escript: escript(),
-      test_coverage: [tool: ExCoveralls],
-      preferred_cli_env: [coveralls: :test],
-      aliases: aliases()
-    ]
-  end
+def project do
+  [
+    app: :ledger,
+    version: "0.1.0",
+    elixir: "~> 1.17",
+    start_permanent: Mix.env() == :prod,
+    deps: deps(),
+    escript: escript(),
+    test_coverage: [tool: ExCoveralls],
+    preferred_cli_env: [coveralls: :test],
+    aliases: aliases()
+  ]
+end
+
 
   defp escript do
     [main_module: Ledger.CLI]

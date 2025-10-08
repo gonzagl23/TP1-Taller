@@ -12,8 +12,8 @@ defmodule Ledger.TransaccionesDB do
     existe_alta? =
       from(t in Transaccion,
         where: t.tipo == "alta_cuenta" and
-               t.cuenta_origen_id == ^cuenta_id and
-               t.moneda_origen_id == ^moneda_id,
+              t.cuenta_origen_id == ^cuenta_id and
+              t.moneda_origen_id == ^moneda_id,
         select: count(t.id)
       )
       |> Repo.one()
@@ -23,15 +23,17 @@ defmodule Ledger.TransaccionesDB do
       {:error, :alta_cuenta, "La cuenta para el usuario #{cuenta_id} y la moneda #{moneda_id} ya fue dada de alta"}
     else
       with {:ok, _usuario} <- validar_usuario(cuenta_id),
-           {:ok, _moneda} <- validar_moneda(moneda_id) do
-        %Transaccion{}
-        |> Transaccion.changeset_alta_cuenta(attrs)
-        |> Repo.insert()
+          {:ok, _moneda} <- validar_moneda(moneda_id) do
+        case %Transaccion{} |> Transaccion.changeset_alta_cuenta(attrs) |> Repo.insert() do
+          {:ok, tx} -> {:ok, tx}
+          {:error, changeset} -> {:error, :alta_cuenta, changeset}
+        end
       else
         {:error, mensaje} -> {:error, :alta_cuenta, mensaje}
       end
     end
   end
+
 
   def realizar_transferencia(attrs) do
     with {:ok, _origen} <- validar_usuario(attrs["cuenta_origen_id"]),
@@ -56,11 +58,18 @@ defmodule Ledger.TransaccionesDB do
 
   def realizar_swap(attrs) do
     with {:ok, _usuario} <- validar_usuario(attrs["cuenta_origen_id"]),
-         {:ok, _moneda_origen} <- validar_moneda(attrs["moneda_origen_id"]),
-         {:ok, _moneda_destino} <- validar_moneda(attrs["moneda_destino_id"]),
-         {:ok, _} <- validar_alta_cuenta(attrs["cuenta_origen_id"], attrs["moneda_origen_id"]) do
+        {:ok, _moneda_origen} <- validar_moneda(attrs["moneda_origen_id"]),
+        {:ok, _moneda_destino} <- validar_moneda(attrs["moneda_destino_id"]),
+        {:ok, _} <- validar_alta_cuenta(attrs["cuenta_origen_id"], attrs["moneda_origen_id"]),
+        {:ok, _} <- validar_alta_cuenta(attrs["cuenta_origen_id"], attrs["moneda_destino_id"]) do
       %Transaccion{}
-      |> Transaccion.changeset_swap(attrs)
+      |> Transaccion.changeset_swap(%{
+          "cuenta_origen_id" => attrs["cuenta_origen_id"],
+          "moneda_origen_id" => attrs["moneda_origen_id"],
+          "moneda_destino_id" => attrs["moneda_destino_id"],
+          "monto" => attrs["monto"],
+          "tipo" => "swap"
+        })
       |> Repo.insert()
     else
       {:error, mensaje} -> {:error, :realizar_swap, mensaje}
@@ -77,7 +86,7 @@ defmodule Ledger.TransaccionesDB do
           from(t in Transaccion,
             where: t.cuenta_origen_id == ^transaccion.cuenta_origen_id or
                   t.cuenta_destino_id == ^transaccion.cuenta_origen_id,
-            order_by: [desc: t.fecha_creacion],
+            order_by: [desc: t.fecha_creacion, desc: t.id],
             limit: 1
           )
           |> Repo.one()
@@ -87,7 +96,7 @@ defmodule Ledger.TransaccionesDB do
             from(t in Transaccion,
               where: t.cuenta_origen_id == ^transaccion.cuenta_destino_id or
                     t.cuenta_destino_id == ^transaccion.cuenta_destino_id,
-              order_by: [desc: t.fecha_creacion],
+              order_by: [desc: t.fecha_creacion, desc: t.id],
               limit: 1
             )
             |> Repo.one()
@@ -96,6 +105,9 @@ defmodule Ledger.TransaccionesDB do
           end
 
         cond do
+          ultima_origen == nil ->
+            {:error, :deshacer_transaccion, "No se puede deshacer: no hay transacciones previas para la cuenta origen"}
+
           ultima_origen.id != transaccion.id ->
             {:error, :deshacer_transaccion, "No se puede deshacer, no es la última transacción de la cuenta origen"}
 
@@ -103,20 +115,23 @@ defmodule Ledger.TransaccionesDB do
             {:error, :deshacer_transaccion, "No se puede deshacer, no es la última transacción de la cuenta destino"}
 
           true ->
-            opuesta =
-              %Transaccion{
-                moneda_origen_id: transaccion.moneda_destino_id,
-                moneda_destino_id: transaccion.moneda_origen_id,
-                cuenta_origen_id: transaccion.cuenta_destino_id,
-                cuenta_destino_id: transaccion.cuenta_origen_id,
-                monto: transaccion.monto,
-                tipo: "deshacer"
-              }
+            opuesta_attrs = %{
+              cuenta_origen_id: transaccion.cuenta_destino_id,
+              cuenta_destino_id: transaccion.cuenta_origen_id,
+              monto: transaccion.monto,
+              tipo: "deshacer",
+              moneda_origen_id: transaccion.moneda_origen_id,
+              moneda_destino_id: transaccion.moneda_destino_id
+            }
 
-            Repo.insert(opuesta)
+            %Transaccion{}
+            |> Transaccion.changeset_transferencia(opuesta_attrs)
+            |> Repo.insert()
         end
     end
   end
+
+
 
 
   def ver_transaccion(id) do

@@ -4,7 +4,6 @@ defmodule Ledger.MonedasTest do
   alias Ledger.Monedas
   alias Ledger.Monedas.Moneda
   alias Ledger.Repo
-  alias Ledger.MonedasCLI
 
   setup do
     :ok = Ecto.Adapters.SQL.Sandbox.checkout(Repo)
@@ -75,7 +74,7 @@ defmodule Ledger.MonedasTest do
     test "crear CLI exitosa" do
       output =
         capture_io(fn ->
-          MonedasCLI.crear(["-n=EOS", "-p=5.0"])
+          Ledger.CLI.main(["crear_moneda", "-n=EOS", "-p=5.0"])
         end)
 
       assert output =~ "EOS"
@@ -85,7 +84,7 @@ defmodule Ledger.MonedasTest do
     test "crear CLI precio faltante" do
       output =
         capture_io(fn ->
-          MonedasCLI.crear(["-n=EOS"])
+          Ledger.CLI.main(["crear_moneda", "-n=EOS"])
         end)
 
       assert output =~ "Falta el flag -p"
@@ -94,7 +93,7 @@ defmodule Ledger.MonedasTest do
     test "crear CLI precio inválido" do
       output =
         capture_io(fn ->
-          MonedasCLI.crear(["-n=EOS", "-p=abc"])
+          Ledger.CLI.main(["crear_moneda", "-n=EOS", "-p=abc"])
         end)
 
       assert output =~ "Precio invalido"
@@ -105,7 +104,7 @@ defmodule Ledger.MonedasTest do
 
       output =
         capture_io(fn ->
-          MonedasCLI.editar(["-id=#{moneda.id}"])
+          Ledger.CLI.main(["editar_moneda", "-id=#{moneda.id}"])
         end)
 
       assert output =~ "No hay cambios para aplicar"
@@ -116,7 +115,7 @@ defmodule Ledger.MonedasTest do
 
       output =
         capture_io(fn ->
-          MonedasCLI.editar(["-id=#{moneda.id}", "-p=2.0"])
+          Ledger.CLI.main(["editar_moneda", "-id=#{moneda.id}", "-p=2.0"])
         end)
 
       assert output =~ "Moneda editada correctamente"
@@ -126,7 +125,7 @@ defmodule Ledger.MonedasTest do
     test "editar CLI moneda inexistente" do
       output =
         capture_io(fn ->
-          MonedasCLI.editar(["-id=999", "-p=2.0"])
+          Ledger.CLI.main(["editar_moneda", "-id=999", "-p=2.0"])
         end)
 
       assert output =~ "no existe" || output =~ "La moneda no existe"
@@ -137,7 +136,7 @@ defmodule Ledger.MonedasTest do
 
       output =
         capture_io(fn ->
-          MonedasCLI.borrar(["-id=#{moneda.id}"])
+          Ledger.CLI.main(["borrar_moneda", "-id=#{moneda.id}"])
         end)
 
       assert output =~ "Moneda borrada correctamente"
@@ -148,7 +147,7 @@ defmodule Ledger.MonedasTest do
 
       output =
         capture_io(fn ->
-          MonedasCLI.ver(["-id=#{moneda.id}"])
+          Ledger.CLI.main(["ver_moneda", "-id=#{moneda.id}"])
         end)
 
       assert output =~ "LINK"
@@ -158,10 +157,11 @@ defmodule Ledger.MonedasTest do
     test "ver CLI moneda inexistente" do
       output =
         capture_io(fn ->
-          MonedasCLI.ver(["-id=999"])
+          Ledger.CLI.main(["ver_moneda", "-id=999"])
         end)
 
       assert output =~ "no existe" || output =~ "La moneda no existe"
     end
   end
+
 end
