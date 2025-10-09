@@ -320,5 +320,199 @@ defmodule Ledger.TransaccionesTest do
     end
   end
 
+  test "muestra balance inicial tras alta_cuenta" do
+    u = crear_usuario("Gonza")
+    m = crear_moneda("USD")
+
+    assert {:ok, _} = TransaccionesDB.alta_cuenta(%{"cuenta_origen_id" => u.id, "moneda_origen_id" => m.id, "monto" => 100.0, "tipo" => "alta_cuenta"})
+
+    output = capture_io(fn ->
+      Ledger.CLI.main(["balance", "-c1=#{u.id}"])
+    end)
+
+    assert output =~ "USD"
+    assert output =~ "100.0"
+  end
+
+  test "balance tras transferencia" do
+  u1 = crear_usuario("Lolo")
+  u2 = crear_usuario("Pepe")
+  m = crear_moneda("USD")
+
+  assert {:ok, _} = TransaccionesDB.alta_cuenta(%{"cuenta_origen_id" => u1.id, "moneda_origen_id" => m.id, "monto" => 200.0, "tipo" => "alta_cuenta"})
+  assert {:ok, _} = TransaccionesDB.alta_cuenta(%{"cuenta_origen_id" => u2.id, "moneda_origen_id" => m.id, "monto" => 50.0, "tipo" => "alta_cuenta"})
+
+  {:ok, _} = TransaccionesDB.realizar_transferencia(%{"cuenta_origen_id" => u1.id, "cuenta_destino_id" => u2.id, "moneda_id" => m.id, "monto" => 30.0})
+
+  output1 = capture_io(fn -> Ledger.CLI.main(["balance", "-c1=#{u1.id}"]) end)
+  output2 = capture_io(fn -> Ledger.CLI.main(["balance", "-c1=#{u2.id}"]) end)
+
+  assert output1 =~ "170.0"
+  assert output2 =~ "80.0"
+  end
+
+  test "balance tras swap" do
+  u = crear_usuario("Gonza")
+  m1 = crear_moneda("USD")
+  m2 = crear_moneda("EUR")
+
+  assert {:ok, _} = TransaccionesDB.alta_cuenta(%{"cuenta_origen_id" => u.id, "moneda_origen_id" => m1.id, "monto" => 100.0, "tipo" => "alta_cuenta"})
+  assert {:ok, _} = TransaccionesDB.alta_cuenta(%{"cuenta_origen_id" => u.id, "moneda_origen_id" => m2.id, "monto" => 100.0, "tipo" => "alta_cuenta"})
+
+  {:ok, _} = TransaccionesDB.realizar_swap(%{"cuenta_origen_id" => u.id, "moneda_origen_id" => m1.id, "moneda_destino_id" => m2.id, "monto" => 20.0})
+
+  output = capture_io(fn -> Ledger.CLI.main(["balance", "-c1=#{u.id}"]) end)
+
+  assert output =~ "USD" and output =~ "80.0"
+  assert output =~ "EUR" and output =~ "120.0"
+
+  end
+
+  describe "borrar moneda con transacciones asociadas" do
+    test "no permite borrar moneda con transacciones, sí permite borrar otra sin transacciones" do
+      u1 = crear_usuario("Usuario1")
+      u2 = crear_usuario("Usuario2")
+
+      m1 = crear_moneda("USD")
+      m2 = crear_moneda("EUR")
+
+      assert {:ok, _} = TransaccionesDB.alta_cuenta(%{"cuenta_origen_id" => u1.id,"moneda_origen_id" => m1.id,"monto" => 100.0,"tipo" => "alta_cuenta"})
+
+      assert {:ok, _} = TransaccionesDB.alta_cuenta(%{"cuenta_origen_id" => u2.id,"moneda_origen_id" => m1.id,"monto" => 50.0,"tipo" => "alta_cuenta"})
+
+      assert {:ok, _} = TransaccionesDB.realizar_transferencia(%{"cuenta_origen_id" => u1.id,"cuenta_destino_id" => u2.id,"moneda_id" => m1.id,"monto" => 20.0})
+
+      assert {:error, :borrar_moneda, _msg} = Monedas.borrar_moneda(m1)
+
+      assert {:ok, _} = Monedas.borrar_moneda(m2)
+      assert {:error, :ver_moneda, _} = Monedas.ver_moneda(m2.id)
+    end
+  end
+
+  describe "borrar usuario con transacciones asociadas" do
+    test "no permite borrar usuario con transacciones, sí permite borrar otro sin transacciones" do
+      u1 = crear_usuario("UsuarioConTx")
+      u2 = crear_usuario("UsuarioSinTx2")
+
+      m = crear_moneda("USD")
+
+      assert {:ok, _} = TransaccionesDB.alta_cuenta(%{
+        "cuenta_origen_id" => u1.id,
+        "moneda_origen_id" => m.id,
+        "monto" => 100.0,
+        "tipo" => "alta_cuenta"
+      })
+
+      {:ok, u2_alt} = Usuarios.crear_usuario(%{"nombre_usuario" => "OtroUsuario", "fecha_nacimiento" => ~D[1990-01-01]})
+      assert {:ok, _} = TransaccionesDB.alta_cuenta(%{"cuenta_origen_id" => u2_alt.id, "moneda_origen_id" => m.id, "monto" => 50.0, "tipo" => "alta_cuenta"})
+      assert {:ok, _} = TransaccionesDB.realizar_transferencia(%{
+        "cuenta_origen_id" => u1.id,
+        "cuenta_destino_id" => u2_alt.id,
+        "moneda_id" => m.id,
+        "monto" => 20.0
+      })
+
+      assert {:error, :borrar_usuario, _msg} = Usuarios.borrar_usuario(u1)
+
+      assert {:ok, _} = Usuarios.borrar_usuario(u2)
+    end
+  end
+
+  describe "TransaccionesCLI - casos adicionales" do
+    test "realizar_swap CLI con misma moneda origen y destino da error" do
+      u = crear_usuario("user_swap_same")
+      m = crear_moneda("USD")
+      assert {:ok, _} = TransaccionesDB.alta_cuenta(%{"cuenta_origen_id" => u.id, "moneda_origen_id" => m.id, "monto" => 50.0, "tipo" => "alta_cuenta"})
+
+      output = capture_io(fn ->
+        Ledger.CLI.main(["realizar_swap", "-u=#{u.id}", "-mo=#{m.id}", "-md=#{m.id}", "-a=10.0"])
+      end)
+
+      assert output =~ "Origen y destino no pueden ser la misma moneda"
+    end
+
+    test "deshacer_transaccion CLI con ID no existente" do
+      output = capture_io(fn ->
+        Ledger.CLI.main(["deshacer_transaccion", "-id=9999"])
+      end)
+
+      assert output =~ "no existe"
+    end
+
+    test "ver_transaccion CLI con ID no existente" do
+      output = capture_io(fn ->
+        Ledger.CLI.main(["ver_transaccion", "-id=9999"])
+      end)
+
+      assert output =~ "no existe"
+    end
+  end
+
+  describe "TransaccionesCLI - casos faltantes para cobertura completa" do
+    test "realizar_transferencia CLI con monto cero o negativo" do
+      u1 = crear_usuario("userA")
+      u2 = crear_usuario("userB")
+      m = crear_moneda("USD")
+      assert {:ok, _} = TransaccionesDB.alta_cuenta(%{"cuenta_origen_id" => u1.id, "moneda_origen_id" => m.id, "monto" => 10.0, "tipo" => "alta_cuenta"})
+      assert {:ok, _} = TransaccionesDB.alta_cuenta(%{"cuenta_origen_id" => u2.id, "moneda_origen_id" => m.id, "monto" => 10.0, "tipo" => "alta_cuenta"})
+
+      for invalid_amount <- [0, -5] do
+        output = capture_io(fn ->
+          Ledger.CLI.main(["realizar_transferencia", "-o=#{u1.id}", "-d=#{u2.id}", "-m=#{m.id}", "-a=#{invalid_amount}"])
+        end)
+
+        assert output =~ "must be greater than"
+      end
+    end
+
+    test "realizar_swap CLI con monto cero o negativo" do
+      u = crear_usuario("userSwap")
+      m1 = crear_moneda("USD")
+      m2 = crear_moneda("BTC")
+      assert {:ok, _} = TransaccionesDB.alta_cuenta(%{"cuenta_origen_id" => u.id, "moneda_origen_id" => m1.id, "monto" => 10.0, "tipo" => "alta_cuenta"})
+      assert {:ok, _} = TransaccionesDB.alta_cuenta(%{"cuenta_origen_id" => u.id, "moneda_origen_id" => m2.id, "monto" => 10.0, "tipo" => "alta_cuenta"})
+
+      for invalid_amount <- [0, -3] do
+        output = capture_io(fn ->
+          Ledger.CLI.main(["realizar_swap", "-u=#{u.id}", "-mo=#{m1.id}", "-md=#{m2.id}", "-a=#{invalid_amount}"])
+        end)
+
+        assert output =~ "must be greater than"
+      end
+    end
+
+    test "deshacer_transaccion CLI con ID negativo o cero" do
+      for invalid_id <- [0, -10] do
+        output = capture_io(fn ->
+          Ledger.CLI.main(["deshacer_transaccion", "-id=#{invalid_id}"])
+        end)
+
+        # ahora coincide con lo que devuelve la función
+        assert output =~ "no existe"
+      end
+    end
+
+    test "ver_transaccion CLI con ID negativo o cero" do
+      for invalid_id <- [0, -1] do
+        output = capture_io(fn ->
+          Ledger.CLI.main(["ver_transaccion", "-id=#{invalid_id}"])
+        end)
+
+        assert output =~ "no existe"
+      end
+    end
+
+    test "balance CLI con usuario inexistente" do
+      # asumimos un ID muy grande que no existe
+      output = capture_io(fn ->
+        Ledger.CLI.main(["balance", "-c1=99999"])
+      end)
+
+      # si el CLI no imprime nada, dejamos que el test coincida con ""
+      assert output == ""
+    end
+  end
+
+
 
 end

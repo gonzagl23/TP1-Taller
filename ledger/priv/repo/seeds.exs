@@ -115,6 +115,17 @@ IO.puts("Creando transacciones...")
   }
   |> Repo.insert()
 
+{:ok, _t7} =
+  %Transaccion{
+    timestamp: NaiveDateTime.truncate(NaiveDateTime.utc_now(), :second),
+    cuenta_origen_id: u2.id,
+    cuenta_destino_id: u1.id,
+    moneda_origen_id: m1.id,
+    monto: 10.00,
+    tipo: "deshacer"
+  }
+  |> Repo.insert()
+
 
 
 IO.puts("Datos iniciales cargados correctamente ✅")

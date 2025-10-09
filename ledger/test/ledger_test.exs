@@ -27,7 +27,7 @@ defmodule LedgerTest do
   test "llama a Balance.calcular con los flags correctos" do
     output =
       ExUnit.CaptureIO.capture_io(fn ->
-        CLI.main(["balance", "-c1=userA"])
+        CLI.main(["balance", "-c1=userA", "-t=transacciones.csv"])
       end)
 
     assert output =~ "USDT="
@@ -163,7 +163,7 @@ defmodule LedgerTest do
   test "calcula balance de userA y muestra por pantalla" do
     output =
       ExUnit.CaptureIO.capture_io(fn ->
-        Balance.calcular(["-c1=userA"])
+        Balance.calcular(["-c1=userA", "-t=transacciones.csv"])
       end)
 
     assert output =~ "ARS=833333.333333"
@@ -176,14 +176,14 @@ defmodule LedgerTest do
   test "calcular balance de userA y convierte balance a USDT correctamente" do
     output =
       ExUnit.CaptureIO.capture_io(fn ->
-        Balance.calcular(["-c1=userA", "-m=USDT"])
+        Balance.calcular(["-c1=userA", "-t=transacciones.csv", "-m=USDT"])
       end)
 
     assert output =~ "USDT=14299.300000"
   end
 
   test "guarda balance en archivo de salida" do
-    Balance.calcular(["-c1=userA", "-o=casos_prueba/salida_balance.csv"])
+    Balance.calcular(["-c1=userA", "-t=transacciones.csv", "-o=casos_prueba/salida_balance.csv"])
     salida = File.read!("casos_prueba/salida_balance.csv")
 
     assert salida =~ "ARS=833333.333333"
@@ -199,7 +199,7 @@ defmodule LedgerTest do
   test "calcular muestra error si moneda es inválida" do
     salida = ExUnit.CaptureIO.capture_io(fn ->
       catch_exit(
-        Ledger.Balance.calcular(["-c1=userA", "-m=da"])
+        Ledger.Balance.calcular(["-c1=userA", "-m=da", "-t=transacciones.csv",])
       )
     end)
 

@@ -1,41 +1,60 @@
 defmodule Ledger.Balance do
-  alias Ledger.CSVParser
-  alias Ledger.Transacciones
-
   @moduledoc """
   Funcionalidad para calcular y mostrar el balance de una cuenta.
   """
 
-  def calcular(flags) do
+  alias Ledger.Repo
+  alias Ledger.Transacciones
+  alias Ledger.Monedas.Moneda
+  alias Ledger.CSVParser
+
+  def calcular(flags, _opts \\ []) do
     opciones = parsear_flags(flags)
     cuenta = Map.get(opciones, :cuenta_origen)
     moneda_destino = Map.get(opciones, :moneda_destino)
     archivo_salida = Map.get(opciones, :archivo_salida)
+    archivo_transacciones = Map.get(opciones, :archivo_transacciones)
 
     if is_nil(cuenta) do
       IO.puts("Error: Debe especificarse el flag -c1")
       exit(:cuenta_invalida)
     end
 
-    archivo_transacciones = Map.get(opciones, :archivo_transacciones, "transacciones.csv")
-    transacciones = CSVParser.leer_transacciones(archivo_transacciones)
+    usar_csv = not is_nil(archivo_transacciones)
 
-    case Transacciones.validar_y_filtrar(transacciones) do
+    transacciones =
+      if usar_csv do
+        CSVParser.leer_transacciones(archivo_transacciones)
+      else
+        Transacciones.obtener_transacciones_db()
+      end
+
+    opts_validacion = [usar_csv: usar_csv]
+
+    case Transacciones.validar_y_filtrar(transacciones, nil, nil, opts_validacion) do
       {:error, errores} ->
         Enum.each(errores, &IO.puts/1)
         exit(:transacciones_invalidas)
 
       {:ok, transacciones_validas, _cuentas_altas} ->
-        precios = CSVParser.leer_monedas("monedas.csv")
+        precios =
+          if usar_csv do
+            CSVParser.leer_monedas("monedas.csv")
+          else
+            Repo.all(Moneda)
+            |> Enum.reduce(%{}, fn m, acc -> Map.put(acc, m.nombre_moneda, m.precio_dolares) end)
+          end
+
+        cuenta_str = to_string(cuenta)
 
         transacciones_cuenta =
           Enum.filter(transacciones_validas, fn t ->
-            t.cuenta_origen == cuenta or t.cuenta_destino == cuenta
+            t.cuenta_origen == cuenta_str or t.cuenta_destino == cuenta_str
           end)
 
         balances =
           Enum.reduce(transacciones_cuenta, %{}, fn t, acc ->
-            actualizar_balance(acc, t, cuenta, precios)
+            actualizar_balance(acc, t, cuenta_str, precios)
           end)
 
         balances_finales =
@@ -48,8 +67,7 @@ defmodule Ledger.Balance do
               {:ok, precio_destino} ->
                 total_usd =
                   Enum.reduce(balances, 0.0, fn {moneda, saldo}, suma ->
-                    precio_moneda = Map.get(precios, moneda, 0)
-                    suma + saldo * precio_moneda
+                    suma + saldo * Map.get(precios, moneda, 0)
                   end)
 
                 %{moneda_destino => total_usd / precio_destino}
@@ -66,41 +84,41 @@ defmodule Ledger.Balance do
     end
   end
 
-  defp actualizar_balance(balances, transaccion, cuenta, precios) do
+  defp actualizar_balance(balances, transaccion, cuenta_objetivo, precios) do
     case transaccion.tipo do
       "transferencia" ->
+        moneda_origen = transaccion.moneda_origen
+        moneda_destino = if transaccion.moneda_destino != "", do: transaccion.moneda_destino, else: moneda_origen
+
         balances
-        |> actualizar_saldo(
-          transaccion.cuenta_origen,
-          transaccion.moneda_origen,
-          -transaccion.monto,
-          cuenta
-        )
-        |> actualizar_saldo(
-          transaccion.cuenta_destino,
-          transaccion.moneda_destino,
-          transaccion.monto,
-          cuenta
-        )
+        |> actualizar_saldo(transaccion.cuenta_origen, moneda_origen, -transaccion.monto, cuenta_objetivo)
+        |> actualizar_saldo(transaccion.cuenta_destino, moneda_destino, transaccion.monto, cuenta_objetivo)
+
+      "deshacer" ->
+        moneda_origen = transaccion.moneda_origen
+        moneda_destino = if transaccion.moneda_destino != "", do: transaccion.moneda_destino, else: moneda_origen
+
+        balances
+        |> actualizar_saldo(transaccion.cuenta_origen, moneda_origen, -transaccion.monto, cuenta_objetivo)
+        |> actualizar_saldo(transaccion.cuenta_destino, moneda_destino, transaccion.monto, cuenta_objetivo)
 
       "swap" ->
-        precio_origen = Map.get(precios, transaccion.moneda_origen, 0.0)
-        precio_destino = Map.get(precios, transaccion.moneda_destino, 0.0)
+        moneda_origen = transaccion.moneda_origen
+        moneda_destino = transaccion.moneda_destino
+        precio_origen = Map.get(precios, moneda_origen, 0.0)
+        precio_destino = Map.get(precios, moneda_destino, 0.0)
         monto_usd = transaccion.monto * precio_origen
-        monto_convertido = monto_usd / precio_destino
+        monto_convertido = if precio_destino == 0.0, do: 0.0, else: monto_usd / precio_destino
 
         balances
-        |> actualizar_saldo(cuenta, transaccion.moneda_origen, -transaccion.monto, cuenta)
-        |> actualizar_saldo(cuenta, transaccion.moneda_destino, monto_convertido, cuenta)
+        |> actualizar_saldo(transaccion.cuenta_origen, moneda_origen, -transaccion.monto, cuenta_objetivo)
+        |> actualizar_saldo(transaccion.cuenta_origen, moneda_destino, monto_convertido, cuenta_objetivo)
 
       "alta_cuenta" ->
-        actualizar_saldo(
-          balances,
-          transaccion.cuenta_origen,
-          transaccion.moneda_origen,
-          transaccion.monto,
-          cuenta
-        )
+        actualizar_saldo(balances, transaccion.cuenta_origen, transaccion.moneda_origen, transaccion.monto, cuenta_objetivo)
+
+      _ ->
+        balances
     end
   end
 
@@ -133,7 +151,7 @@ defmodule Ledger.Balance do
         ["-m", valor] -> Map.put(acc, :moneda_destino, valor)
         ["-o", valor] -> Map.put(acc, :archivo_salida, valor)
         ["-t", valor] -> Map.put(acc, :archivo_transacciones, valor)
-        _flag_incorrecto -> acc
+        _ -> acc
       end
     end)
   end

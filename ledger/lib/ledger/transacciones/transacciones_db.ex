@@ -57,24 +57,29 @@ defmodule Ledger.TransaccionesDB do
 
 
   def realizar_swap(attrs) do
-    with {:ok, _usuario} <- validar_usuario(attrs["cuenta_origen_id"]),
-        {:ok, _moneda_origen} <- validar_moneda(attrs["moneda_origen_id"]),
-        {:ok, _moneda_destino} <- validar_moneda(attrs["moneda_destino_id"]),
-        {:ok, _} <- validar_alta_cuenta(attrs["cuenta_origen_id"], attrs["moneda_origen_id"]),
-        {:ok, _} <- validar_alta_cuenta(attrs["cuenta_origen_id"], attrs["moneda_destino_id"]) do
-      %Transaccion{}
-      |> Transaccion.changeset_swap(%{
-          "cuenta_origen_id" => attrs["cuenta_origen_id"],
-          "moneda_origen_id" => attrs["moneda_origen_id"],
-          "moneda_destino_id" => attrs["moneda_destino_id"],
-          "monto" => attrs["monto"],
-          "tipo" => "swap"
-        })
-      |> Repo.insert()
+    if attrs["moneda_origen_id"] == attrs["moneda_destino_id"] do
+      {:error, :realizar_swap, "Origen y destino no pueden ser la misma moneda"}
     else
-      {:error, mensaje} -> {:error, :realizar_swap, mensaje}
+      with {:ok, _usuario} <- validar_usuario(attrs["cuenta_origen_id"]),
+          {:ok, _moneda_origen} <- validar_moneda(attrs["moneda_origen_id"]),
+          {:ok, _moneda_destino} <- validar_moneda(attrs["moneda_destino_id"]),
+          {:ok, _} <- validar_alta_cuenta(attrs["cuenta_origen_id"], attrs["moneda_origen_id"]),
+          {:ok, _} <- validar_alta_cuenta(attrs["cuenta_origen_id"], attrs["moneda_destino_id"]) do
+        %Transaccion{}
+        |> Transaccion.changeset_swap(%{
+            "cuenta_origen_id" => attrs["cuenta_origen_id"],
+            "moneda_origen_id" => attrs["moneda_origen_id"],
+            "moneda_destino_id" => attrs["moneda_destino_id"],
+            "monto" => attrs["monto"],
+            "tipo" => "swap"
+          })
+        |> Repo.insert()
+      else
+        {:error, mensaje} -> {:error, :realizar_swap, mensaje}
+      end
     end
   end
+
 
   def deshacer_transaccion(id_transaccion) do
     case Repo.get(Transaccion, id_transaccion) do
