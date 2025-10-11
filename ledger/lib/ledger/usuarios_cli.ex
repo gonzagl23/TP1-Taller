@@ -16,7 +16,7 @@ defmodule Ledger.UsuariosCLI do
           {:error, changeset} ->
             errores =
               changeset.errors
-              |> Enum.map(fn {campo, {mensaje, _}} -> "#{campo}: #{mensaje}" end)
+              |> Enum.map(fn {campo, {mensaje, _info}} -> "#{campo}: #{mensaje}" end)
               |> Enum.join(",")
 
             IO.inspect({:error, :crear_usuario, errores})
@@ -121,14 +121,13 @@ defmodule Ledger.UsuariosCLI do
     end
   end
 
-
   defp parsear_flags(args) do
     Enum.reduce(args, %{}, fn arg, acc ->
       case String.split(arg, "=") do
         ["-n", valor] -> Map.put(acc, :nombre_usuario, valor)
         ["-b", valor] -> Map.put(acc, :fecha_nacimiento, valor)
         ["-id", valor] -> Map.put(acc, :id, valor)
-        _ -> acc
+        _flag_invalido -> acc
       end
     end)
   end
@@ -136,7 +135,7 @@ defmodule Ledger.UsuariosCLI do
   defp parse_fecha(str) do
     case Date.from_iso8601(str) do
       {:ok, fecha} -> {:ok, fecha}
-      _ -> {:error, "Fecha invalida: #{str}"}
+      _fecha_invalida -> {:error, "Fecha invalida: #{str}"}
     end
   end
 end

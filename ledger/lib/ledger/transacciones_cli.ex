@@ -25,7 +25,7 @@ defmodule Ledger.TransaccionesCLI do
     opts = parsear_flags(flags)
     monto = parse_monto(opts[:monto])
 
-    if match?({:error, _}, monto) do
+    if match?({:error, _mensaje}, monto) do
       IO.inspect({:error, :realizar_transferencia, "Monto invalido o faltante"})
     else
       case TransaccionesDB.realizar_transferencia(%{
@@ -41,12 +41,11 @@ defmodule Ledger.TransaccionesCLI do
     end
   end
 
-
   def realizar_swap(flags) do
     opts = parsear_flags(flags)
     monto = parse_monto(opts[:monto])
 
-    if match?({:error, _}, monto) do
+    if match?({:error, _mensaje}, monto) do
       IO.inspect({:error, :realizar_swap, "Monto invalido o faltante"})
     else
       case TransaccionesDB.realizar_swap(%{
@@ -78,7 +77,6 @@ defmodule Ledger.TransaccionesCLI do
     end
   end
 
-
   def ver_transaccion(flags) do
     opts = parsear_flags(flags)
 
@@ -94,8 +92,6 @@ defmodule Ledger.TransaccionesCLI do
     end
   end
 
-
-
   defp parsear_flags(args) do
     Enum.reduce(args, %{}, fn arg, acc ->
       case String.split(arg, "=") do
@@ -107,16 +103,17 @@ defmodule Ledger.TransaccionesCLI do
         ["-md", valor] -> Map.put(acc, :moneda_destino, valor)
         ["-a", valor] -> Map.put(acc, :monto, valor)
         ["-id", valor] -> Map.put(acc, :id, valor)
-        _ -> acc
+        _flag_invalido -> acc
       end
     end)
   end
 
   defp parse_monto(nil), do: {:error, "Falta el flag -mm (monto)"}
+
   defp parse_monto(str) do
     case Float.parse(str) do
       {num, ""} -> num
-      {num, _resto} -> num
+      {num, _cadena_restante} -> num
       :error -> {:error, "Monto invalido: #{str}"}
     end
   end
@@ -124,7 +121,7 @@ defmodule Ledger.TransaccionesCLI do
   defp mostrar_errores(comando, changeset) do
     errores =
       changeset.errors
-      |> Enum.map(fn {campo, {mensaje, _}} -> "#{campo}: #{mensaje}" end)
+      |> Enum.map(fn {campo, {mensaje, _info}} -> "#{campo}: #{mensaje}" end)
       |> Enum.join(", ")
 
     IO.inspect({:error, comando, errores})
@@ -149,12 +146,10 @@ defmodule Ledger.TransaccionesCLI do
     """)
   end
 
-  defp format_monto(m) when is_float(m) do
-    s = :erlang.float_to_binary(m, decimals: 6)
-    s
+  defp format_monto(monto) when is_float(monto) do
+    monto_str = :erlang.float_to_binary(monto, decimals: 6)
+    monto_str
     |> String.trim_trailing("0")
     |> String.trim_trailing(".")
   end
-
-
 end

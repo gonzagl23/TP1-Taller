@@ -34,7 +34,7 @@ defmodule Ledger.Usuarios.Usuario do
         else
           add_error(changeset, field, "el usuario debe tener al menos 18 años")
         end
-      _ -> changeset
+      _valor_no_valido -> changeset
     end
   end
 
@@ -47,7 +47,7 @@ defmodule Ledger.Usuarios.Usuario do
   defp validar_nombre_distinto(changeset) do
     anterior = changeset.data.nombre_usuario
 
-    nomnbre_enviado =
+    nombre_enviado =
       cond do
         is_map(changeset.params) and Map.has_key?(changeset.params, "nombre_usuario") ->
           Map.get(changeset.params, "nombre_usuario")
@@ -59,10 +59,10 @@ defmodule Ledger.Usuarios.Usuario do
           Ecto.Changeset.get_change(changeset, :nombre_usuario)
       end
 
-    case nomnbre_enviado do
+    case nombre_enviado do
       nil -> changeset
       ^anterior -> Ecto.Changeset.add_error(changeset, :nombre_usuario, "el nombre de usuario debe ser distinto al anterior")
-      _ -> changeset
+      _nombre -> changeset
     end
   end
 

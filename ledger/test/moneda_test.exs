@@ -21,7 +21,7 @@ defmodule Ledger.MonedasTest do
     m
   end
 
-  describe "crear_moneda/1" do
+  describe "crear_moneda" do
     test "crea moneda válida" do
       attrs = %{"nombre_moneda" => "BTC", "precio_dolares" => 3000.00}
       assert {:ok, %Moneda{} = moneda} = Monedas.crear_moneda(attrs)
@@ -49,7 +49,7 @@ defmodule Ledger.MonedasTest do
     end
   end
 
-  describe "ver_moneda/1" do
+  describe "ver_moneda" do
     test "devuelve moneda existente" do
       {:ok, moneda} = Monedas.crear_moneda(%{"nombre_moneda" => "LTC", "precio_dolares" => 80.00})
       assert {:ok, ^moneda} = Monedas.ver_moneda(moneda.id)
@@ -60,7 +60,7 @@ defmodule Ledger.MonedasTest do
     end
   end
 
-  describe "editar_moneda/2" do
+  describe "editar_moneda" do
     test "cambia precio correctamente" do
       {:ok, moneda} = Monedas.crear_moneda(%{"nombre_moneda" => "DOGE", "precio_dolares" => 0.10})
       assert {:ok, moneda_editada} = Monedas.editar_moneda(moneda, %{precio_dolares: 0.15})
@@ -74,7 +74,7 @@ defmodule Ledger.MonedasTest do
     end
   end
 
-  describe "borrar_moneda/1" do
+  describe "borrar_moneda" do
     test "borra moneda sin transacciones" do
       {:ok, moneda} = Monedas.crear_moneda(%{"nombre_moneda" => "BNB", "precio_dolares" => 200.00})
       assert {:ok, _} = Monedas.borrar_moneda(moneda)
@@ -83,7 +83,7 @@ defmodule Ledger.MonedasTest do
   end
 
   describe "MonedasCLI" do
-    test "crear CLI exitosa" do
+    test "crear moneda" do
       output =
         capture_io(fn ->
           Ledger.CLI.main(["crear_moneda", "-n=EOS", "-p=5.0"])
@@ -93,7 +93,7 @@ defmodule Ledger.MonedasTest do
       assert output =~ "5.0"
     end
 
-    test "crear CLI precio faltante" do
+    test "crear moneda con precio faltante" do
       output =
         capture_io(fn ->
           Ledger.CLI.main(["crear_moneda", "-n=EOS"])
@@ -102,7 +102,7 @@ defmodule Ledger.MonedasTest do
       assert output =~ "Falta el flag -p"
     end
 
-    test "crear CLI precio inválido" do
+    test "crear moneda con precio inválido" do
       output =
         capture_io(fn ->
           Ledger.CLI.main(["crear_moneda", "-n=EOS", "-p=abc"])
@@ -111,7 +111,7 @@ defmodule Ledger.MonedasTest do
       assert output =~ "Precio invalido"
     end
 
-    test "editar CLI sin cambios" do
+    test "editar moneda sin cambios" do
       {:ok, moneda} = Monedas.crear_moneda(%{"nombre_moneda" => "TRX", "precio_dolares" => 1.0})
 
       output =
@@ -122,7 +122,7 @@ defmodule Ledger.MonedasTest do
       assert output =~ "Falta el flag -p"
     end
 
-    test "editar CLI con precio válido" do
+    test "editar moneda con precio válido" do
       {:ok, moneda} = Monedas.crear_moneda(%{"nombre_moneda" => "TRX", "precio_dolares" => 1.0})
 
       output =
@@ -134,7 +134,7 @@ defmodule Ledger.MonedasTest do
       assert output =~ "2.0"
     end
 
-    test "editar CLI moneda inexistente" do
+    test "editar moneda inexistente" do
       output =
         capture_io(fn ->
           Ledger.CLI.main(["editar_moneda", "-id=999", "-p=2.0"])
@@ -143,7 +143,7 @@ defmodule Ledger.MonedasTest do
       assert output =~ "no existe" || output =~ "La moneda no existe"
     end
 
-    test "borrar CLI exitosa" do
+    test "borrar moneda" do
       {:ok, moneda} = Monedas.crear_moneda(%{"nombre_moneda" => "SOL", "precio_dolares" => 20.0})
 
       output =
@@ -154,7 +154,7 @@ defmodule Ledger.MonedasTest do
       assert output =~ "Moneda borrada correctamente"
     end
 
-    test "ver CLI existente" do
+    test "ver moneda" do
       {:ok, moneda} = Monedas.crear_moneda(%{"nombre_moneda" => "LINK", "precio_dolares" => 7.0})
 
       output =
@@ -166,7 +166,7 @@ defmodule Ledger.MonedasTest do
       assert output =~ "7.0"
     end
 
-    test "ver CLI moneda inexistente" do
+    test "ver moneda inexistente" do
       output =
         capture_io(fn ->
           Ledger.CLI.main(["ver_moneda", "-id=999"])
@@ -174,9 +174,7 @@ defmodule Ledger.MonedasTest do
 
       assert output =~ "no existe" || output =~ "La moneda no existe"
     end
-  end
 
-describe "borrar moneda con transacciones asociadas CLI" do
     test "no permite borrar moneda con transacciones, sí permite borrar otra sin transacciones" do
       u1 = crear_usuario("Usuario1")
       u2 = crear_usuario("Usuario2")
@@ -184,29 +182,9 @@ describe "borrar moneda con transacciones asociadas CLI" do
       m1 = crear_moneda("USD")
       m2 = crear_moneda("EUR")
 
-      assert {:ok, _} =
-              TransaccionesDB.alta_cuenta(%{
-                "cuenta_origen_id" => u1.id,
-                "moneda_origen_id" => m1.id,
-                "monto" => 100.0,
-                "tipo" => "alta_cuenta"
-              })
-
-      assert {:ok, _} =
-              TransaccionesDB.alta_cuenta(%{
-                "cuenta_origen_id" => u2.id,
-                "moneda_origen_id" => m1.id,
-                "monto" => 50.0,
-                "tipo" => "alta_cuenta"
-              })
-
-      assert {:ok, _} =
-              TransaccionesDB.realizar_transferencia(%{
-                "cuenta_origen_id" => u1.id,
-                "cuenta_destino_id" => u2.id,
-                "moneda_id" => m1.id,
-                "monto" => 20.0
-              })
+      assert {:ok, _} = TransaccionesDB.alta_cuenta(%{"cuenta_origen_id" => u1.id,"moneda_origen_id" => m1.id,"monto" => 100.0,"tipo" => "alta_cuenta"})
+      assert {:ok, _} = TransaccionesDB.alta_cuenta(%{"cuenta_origen_id" => u2.id,"moneda_origen_id" => m1.id,"monto" => 50.0,"tipo" => "alta_cuenta"})
+      assert {:ok, _} = TransaccionesDB.realizar_transferencia(%{"cuenta_origen_id" => u1.id,"cuenta_destino_id" => u2.id,"moneda_id" => m1.id,"monto" => 20.0})
 
       output1 =
         capture_io(fn ->
@@ -223,24 +201,22 @@ describe "borrar moneda con transacciones asociadas CLI" do
       assert output2 =~ "Moneda borrada correctamente"
       assert {:error, :ver_moneda, _} = Monedas.ver_moneda(m2.id)
     end
-  end
 
-  describe "MonedasCLI casos adicionales" do
-    test "crear CLI sin nombre" do
+    test "crear moneda sin nombre" do
       output = capture_io(fn ->
         Ledger.CLI.main(["crear_moneda", "-p=5.0"])
       end)
       assert output =~ "nombre"
     end
 
-    test "crear CLI con nombre inválido" do
+    test "crear moneda con nombre inválido" do
       output = capture_io(fn ->
         Ledger.CLI.main(["crear_moneda", "-n=ab", "-p=5.0"])
       end)
       assert output =~ "mayúsculas"
     end
 
-    test "editar CLI con precio inválido" do
+    test "editar moneda con precio inválido" do
       {:ok, m} = Monedas.crear_moneda(%{"nombre_moneda" => "ADA", "precio_dolares" => 1.0})
 
       output = capture_io(fn ->
@@ -250,7 +226,7 @@ describe "borrar moneda con transacciones asociadas CLI" do
       assert output =~ "Precio invalido"
     end
 
-    test "editar CLI con precio negativo" do
+    test "editar moneda con precio negativo" do
       {:ok, m} = Monedas.crear_moneda(%{"nombre_moneda" => "XLM", "precio_dolares" => 1.0})
 
       output = capture_io(fn ->
@@ -260,7 +236,7 @@ describe "borrar moneda con transacciones asociadas CLI" do
       assert output =~ "precio_dolares"
     end
 
-    test "borrar CLI moneda inexistente" do
+    test "borrar moneda inexistente" do
       output = capture_io(fn ->
         Ledger.CLI.main(["borrar_moneda", "-id=999"])
       end)
@@ -268,7 +244,7 @@ describe "borrar moneda con transacciones asociadas CLI" do
       assert output =~ "no existe"
     end
 
-    test "ver CLI sin id" do
+    test "ver moneda sin id" do
       output = capture_io(fn ->
         Ledger.CLI.main(["ver_moneda"])
       end)

@@ -34,13 +34,12 @@ defmodule Ledger.TransaccionesDB do
     end
   end
 
-
   def realizar_transferencia(attrs) do
-    with {:ok, _origen} <- validar_usuario(attrs["cuenta_origen_id"]),
-        {:ok, _destino} <- validar_usuario(attrs["cuenta_destino_id"]),
+    with {:ok, _usurio} <- validar_usuario(attrs["cuenta_origen_id"]),
+        {:ok, _usuario} <- validar_usuario(attrs["cuenta_destino_id"]),
         {:ok, _moneda} <- validar_moneda(attrs["moneda_id"]),
-        {:ok, _} <- validar_alta_cuenta(attrs["cuenta_origen_id"], attrs["moneda_id"]),
-        {:ok, _} <- validar_alta_cuenta(attrs["cuenta_destino_id"], attrs["moneda_id"]) do
+        {:ok, _cuenta_origen} <- validar_alta_cuenta(attrs["cuenta_origen_id"], attrs["moneda_id"]),
+        {:ok, _cuenta_destino} <- validar_alta_cuenta(attrs["cuenta_destino_id"], attrs["moneda_id"]) do
       %Transaccion{}
       |> Transaccion.changeset_transferencia(%{
           "cuenta_origen_id" => attrs["cuenta_origen_id"],
@@ -55,7 +54,6 @@ defmodule Ledger.TransaccionesDB do
     end
   end
 
-
   def realizar_swap(attrs) do
     if attrs["moneda_origen_id"] == attrs["moneda_destino_id"] do
       {:error, :realizar_swap, "Origen y destino no pueden ser la misma moneda"}
@@ -63,8 +61,8 @@ defmodule Ledger.TransaccionesDB do
       with {:ok, _usuario} <- validar_usuario(attrs["cuenta_origen_id"]),
           {:ok, _moneda_origen} <- validar_moneda(attrs["moneda_origen_id"]),
           {:ok, _moneda_destino} <- validar_moneda(attrs["moneda_destino_id"]),
-          {:ok, _} <- validar_alta_cuenta(attrs["cuenta_origen_id"], attrs["moneda_origen_id"]),
-          {:ok, _} <- validar_alta_cuenta(attrs["cuenta_origen_id"], attrs["moneda_destino_id"]) do
+          {:ok, _cuenta_origen} <- validar_alta_cuenta(attrs["cuenta_origen_id"], attrs["moneda_origen_id"]),
+          {:ok, _cuenta_destino} <- validar_alta_cuenta(attrs["cuenta_origen_id"], attrs["moneda_destino_id"]) do
         %Transaccion{}
         |> Transaccion.changeset_swap(%{
             "cuenta_origen_id" => attrs["cuenta_origen_id"],
@@ -79,7 +77,6 @@ defmodule Ledger.TransaccionesDB do
       end
     end
   end
-
 
   def deshacer_transaccion(id_transaccion) do
     case Repo.get(Transaccion, id_transaccion) do
@@ -135,9 +132,6 @@ defmodule Ledger.TransaccionesDB do
         end
     end
   end
-
-
-
 
   def ver_transaccion(id) do
     case Repo.get(Transaccion, id) do

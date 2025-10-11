@@ -5,7 +5,6 @@ defmodule LedgerTest do
   alias Ledger.Balance
   alias Ledger.CLI
 
-
   test "muestra mensaje de uso cuando los argumentos son incorrectos" do
     output =
       ExUnit.CaptureIO.capture_io(fn ->
@@ -115,7 +114,6 @@ defmodule LedgerTest do
     assert output =~ "Error en transaccion 1: Monto negativo o cero"
   end
 
-
  test "Error cuando no se encuentra transacciones que coincidan con los filtros" do
   output =
     ExUnit.CaptureIO.capture_io(fn ->
@@ -130,7 +128,6 @@ defmodule LedgerTest do
 
     assert output =~ "Error: No se encontraron transacciones que coincidan con los filtros"
   end
-
 
   test "La función listar(transacciones) filtra por cuenta_origen y cuenta_destino correctamente" do
     output =
@@ -195,7 +192,6 @@ defmodule LedgerTest do
     File.rm("casos_prueba/salida_balance.csv")
   end
 
-
   test "calcular muestra error si moneda es inválida" do
     salida = ExUnit.CaptureIO.capture_io(fn ->
       catch_exit(
@@ -205,7 +201,4 @@ defmodule LedgerTest do
 
     assert salida =~ "Moneda inválida: da"
   end
-
-
-
 end

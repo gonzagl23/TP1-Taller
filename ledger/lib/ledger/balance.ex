@@ -117,7 +117,7 @@ defmodule Ledger.Balance do
       "alta_cuenta" ->
         actualizar_saldo(balances, transaccion.cuenta_origen, transaccion.moneda_origen, transaccion.monto, cuenta_objetivo)
 
-      _ ->
+      _tipo_invalido ->
         balances
     end
   end
@@ -151,7 +151,7 @@ defmodule Ledger.Balance do
         ["-m", valor] -> Map.put(acc, :moneda_destino, valor)
         ["-o", valor] -> Map.put(acc, :archivo_salida, valor)
         ["-t", valor] -> Map.put(acc, :archivo_transacciones, valor)
-        _ -> acc
+        _flag_invalida -> acc
       end
     end)
   end

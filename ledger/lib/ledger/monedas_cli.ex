@@ -16,7 +16,7 @@ defmodule Ledger.MonedasCLI do
           {:error, changeset} ->
             errores =
               changeset.errors
-              |> Enum.map(fn {campo, {mensaje, _}} -> "#{campo}: #{mensaje}" end)
+              |> Enum.map(fn {campo, {mensaje, _info}} -> "#{campo}: #{mensaje}" end)
               |> Enum.join(", ")
 
             IO.inspect({:error, :crear_moneda, errores})
@@ -49,7 +49,7 @@ defmodule Ledger.MonedasCLI do
                   {:error, changeset} ->
                     errores =
                       changeset.errors
-                      |> Enum.map(fn {campo, {mensaje, _}} -> "#{campo}: #{mensaje}" end)
+                      |> Enum.map(fn {campo, {mensaje, _info}} -> "#{campo}: #{mensaje}" end)
                       |> Enum.join(", ")
 
                     IO.inspect({:error, :editar_moneda, errores})
@@ -76,10 +76,10 @@ defmodule Ledger.MonedasCLI do
       case Monedas.ver_moneda(id) do
         {:ok, moneda} ->
           case Monedas.borrar_moneda(moneda) do
-            {:ok, _} -> IO.puts("Moneda borrada correctamente")
+            {:ok, _resultado} -> IO.puts("Moneda borrada correctamente")
             {:error, :borrar_moneda, msg} -> IO.inspect({:error, :borrar_moneda, msg})
-            {:error, reason} ->
-              IO.inspect({:error, :borrar_moneda, "No se pudo borrar la moneda: #{inspect(reason)}"})
+            {:error, motivo} ->
+              IO.inspect({:error, :borrar_moneda, "No se pudo borrar la moneda: #{inspect(motivo)}"})
           end
 
         {:error, :ver_moneda, msg} ->
@@ -110,7 +110,7 @@ defmodule Ledger.MonedasCLI do
         ["-n", valor] -> Map.put(acc, :nombre_moneda, valor)
         ["-p", valor] -> Map.put(acc, :precio_dolares, valor)
         ["-id", valor] -> Map.put(acc, :id, valor)
-        _ -> acc
+        _flag_invalido -> acc
       end
     end)
   end
@@ -120,7 +120,7 @@ defmodule Ledger.MonedasCLI do
   defp parse_precio(str) when is_binary(str) do
     case Float.parse(str) do
       {num, ""} -> {:ok, num}
-      _ -> {:error, "Precio invalido: #{str}"}
+      _precio_invalido -> {:error, "Precio invalido: #{str}"}
     end
   end
 end

@@ -8,7 +8,6 @@ defmodule Ledger.Transacciones do
   alias Ledger.TransaccionesDB.Transaccion
   alias Ledger.CSVParser
 
-  # Listar transacciones con flags y opciones
   def listar(flags, _opts \\ []) do
     opciones = parsear_flags(flags)
     archivo_transacciones = Map.get(opciones, :archivo)
@@ -46,7 +45,6 @@ defmodule Ledger.Transacciones do
     end
   end
 
-  # Obtener transacciones desde la DB
   def obtener_transacciones_db do
     Repo.all(
       from(t in Transaccion,
@@ -74,7 +72,6 @@ defmodule Ledger.Transacciones do
     end)
   end
 
-  # Validar transacciones y aplicar filtros
   def validar_y_filtrar(transacciones, cuenta_origen \\ nil, cuenta_destino \\ nil, opts \\ []) do
     cuentas_activas =
       Enum.reduce(transacciones, MapSet.new(), fn
@@ -82,7 +79,6 @@ defmodule Ledger.Transacciones do
         _transaccion, acc -> acc
       end)
 
-    # Construimos el mapa de monedas: CSV o DB
     monedas =
       if opts[:usar_csv] do
         CSVParser.leer_monedas("monedas.csv")
@@ -113,7 +109,6 @@ defmodule Ledger.Transacciones do
     if errores == [], do: {:ok, Enum.reverse(validas), cuentas_activas}, else: {:error, Enum.reverse(errores)}
   end
 
-  # Validar transacción individual
   defp validar_transaccion(transaccion, cuentas_activas, monedas) do
     tipos_validos = ["transferencia", "swap", "alta_cuenta", "deshacer"]
 
@@ -154,13 +149,11 @@ defmodule Ledger.Transacciones do
     end
   end
 
-  # Filtro por cuenta origen/destino
   defp aplicar_filtro_transaccion?(transaccion, cuenta_origen, cuenta_destino) do
     (is_nil(cuenta_origen) or transaccion.cuenta_origen == cuenta_origen) and
       (is_nil(cuenta_destino) or transaccion.cuenta_destino == cuenta_destino)
   end
 
-  # Mostrar transacciones por pantalla
   defp mostrar_transacciones_por_pantalla(transacciones) do
     Enum.each(transacciones, fn transaccion ->
       monto_formateado = :erlang.float_to_binary(transaccion.monto, decimals: 6)
@@ -171,7 +164,6 @@ defmodule Ledger.Transacciones do
     end)
   end
 
-  # Guardar transacciones en CSV
   defp guardar_transacciones_csv(transacciones, ruta_archivo) do
     File.open!(ruta_archivo, [:write], fn file ->
       Enum.each(transacciones, fn transaccion ->
@@ -185,7 +177,6 @@ defmodule Ledger.Transacciones do
     end)
   end
 
-  # Parsear flags CLI
   defp parsear_flags(args) do
     Enum.reduce(args, %{}, fn arg, acc ->
       case String.split(arg, "=") do
@@ -193,7 +184,7 @@ defmodule Ledger.Transacciones do
         ["-c2", valor] -> Map.put(acc, :cuenta_destino, valor)
         ["-o", valor] -> Map.put(acc, :archivo_salida, valor)
         ["-t", valor] -> Map.put(acc, :archivo, valor)
-        _ -> acc
+        _flag_invalido -> acc
       end
     end)
   end
