@@ -42,7 +42,9 @@ end
   defp aliases do
     [
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
-      "ecto.reset": ["ecto.drop", "ecto.setup"]
+      "ecto.reset": ["ecto.drop", "ecto.setup"],
+      "ecto.setup.test": ["cmd MIX_ENV=test mix ecto.create","cmd MIX_ENV=test mix ecto.migrate"],
+      "ecto.test": ["ecto.setup.test","cmd MIX_ENV=test mix coveralls"]
     ]
   end
 

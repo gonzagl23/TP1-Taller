@@ -1,4 +1,4 @@
-.PHONY: dev db stop 
+.PHONY: dev db stop compile
 
 
 dev:
@@ -11,5 +11,11 @@ db:
 
 stop:
 	docker compose down
+
+compile:
+	mix compile
+	mix escript.build
+
+
 
 
