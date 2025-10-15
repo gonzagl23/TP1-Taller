@@ -1,4 +1,4 @@
-.PHONY: dev db stop compile
+.PHONY: dev db stop compile setup test
 
 
 dev:
@@ -15,6 +15,13 @@ stop:
 compile:
 	mix compile
 	mix escript.build
+
+setup:
+	mix ecto.setup
+	mix ecto.setup.test
+
+test:
+	MIX_ENV=test mix coveralls
 
 
 
