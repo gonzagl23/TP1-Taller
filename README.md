@@ -1,3 +1,24 @@
+# TP2-Taller
+
+## Compilación
+
+1. Entrar a la carpeta del proyecto: ```cd ledger```
+
+2. Levantar Docker: ```make db```
+
+3. Compilar el Proyecto: ```make compile```
+
+4. Crear la base de datos y ejecutar las migraciones:  ```make setup```
+
+    Este comando también ejecutará el archivo seeds.exs, que cargará datos iniciales en la base de datos para poder probar los comandos.
+    Además dejara el entorno preparado para ejecutar los tests posteriormente
+
+5. Ejecutar los tests: ```make test```
+
+    Aclaración: Se utilizo Ecto Sandbox para garantizar que los tests no afecten a otros tests ni a los datos reales de la base de datos
+
+
+
 # TP1-Taller
 
 ## Compilación
