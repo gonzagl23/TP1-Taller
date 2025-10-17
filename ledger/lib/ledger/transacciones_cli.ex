@@ -108,7 +108,7 @@ defmodule Ledger.TransaccionesCLI do
     end)
   end
 
-  defp parse_monto(nil), do: {:error, "Falta el flag -mm (monto)"}
+  defp parse_monto(nil), do: {:error, "Falta el flag -a (monto)"}
 
   defp parse_monto(str) do
     case Float.parse(str) do
