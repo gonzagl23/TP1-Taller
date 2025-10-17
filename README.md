@@ -17,7 +17,43 @@
 
     Aclaración: Se utilizo Ecto Sandbox para garantizar que los tests no afecten a otros tests ni a los datos reales de la base de datos
 
+## Errores Manejados
 
+- **Usuarios:**
+    - El usuario debe ser mayor a 18 años.
+    - El nombre de usuario es obligatorio.
+    - La fecha de nacimiento es obligatoria.
+    - Al editar, el nuevo nombre debe ser distinto al anterior.
+    - No se puede borrar un usuario con transacciones asociadas.
+    - No se puede ver un usuario que no existe (ID inexistente)
+    - El ID debe ser un número válido(no se aceptan cadenas u otros formatos).
+    - Debe indicarse el flag ```-id=<id>``` en las operaciones que los requieran(ver,editar,borrar)
+    - La fecha de nacimiento debe tener un formato válido(YYYY-MM-DD).
+
+- **Monedas:**
+    - El nombre de la moneda es obligatorio.
+    - El nombre debe estar en mayúsculas y tener 3 a 4 letras.
+    - El nombre de la moneda debe ser único(no puede repetirse en la base de datos)
+    - El precio en dólares es obligatorio al crear una moneda.
+    - El precio en dólares no puede ser negativo.
+    - Al editar, el ```precio_dolares``` debe ser un número válido y no negativo.
+    - No se puede borrar una moneda con transacciones asociadas.
+    - No se puede ver una moneda que no existe(ID inexistente).
+    - Debe indicarse el flag ```-id=<id>``` en las operaciones que lo requieran(ver, editar, borrar).
+    - Debe indicarse el flag ```-p=<precio>``` al crear/editar cuando se quiere setear el precio.
+
+- **Transacciones:**
+    - El monto es obligatorio y debe ser mayor a 0.
+    - No se puede dar de alta una cuenta que ya fue creada para el mismo usuario y moneda.
+    - En un swap, la moneda de origen y destino no pueden ser la misma.
+    - Los usuarios y monedas deben existir previamente.
+    - La cuenta del usuario debe estar dada de alta para la moneda antes de usarla en transferencias o swaps.
+    - No se puede deshacer una transacción inexistente.
+    - Solo puede deshacerse la última transacción de cada cuenta involucrada.
+    - No se puede ver una transacción que no existe(ID inexistente).
+    - El ID debe ser un número válido.
+    - Debe indicarse el flag ```-id=<id>``` en las operaciones que lo requieran(ver, deshacer).
+    - Debe indicarse el flag ```-a=<monto>``` en las operaciones que lo requieran(alta_cuenta, transferencia, swap).
 
 # TP1-Taller
 
