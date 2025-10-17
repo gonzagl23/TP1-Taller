@@ -55,6 +55,13 @@
     - Debe indicarse el flag ```-id=<id>``` en las operaciones que lo requieran(ver, deshacer).
     - Debe indicarse el flag ```-a=<monto>``` en las operaciones que lo requieran(alta_cuenta, transferencia, swap).
 
+## Aclaraciones
+
+- Para los comandos del TP1 tanto para el de transacciones y balance sigue funcionando todo igual, con la difencia de que si no se especifica la flag ```-t=<archivo>``` la información la toma de la base de datos.
+    - ```./ledger balance -c1=<id-usuario>```
+    - ```./ledger transacciones -c1=<id-usuario> -c2=<id-usuario>```
+
+
 # TP1-Taller
 
 ## Compilación
